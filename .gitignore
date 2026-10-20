@@ -1,0 +1,24 @@
+# Images (exclues du depot)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.tif
+*.tiff
+
+# Captures binaires volumineuses / donnees brutes
+*.bin
+*.pcapng
+frame_datauri.txt
+
+# Code .NET decompile proprietaire ThorLabs (non redistribue)
+src/
+
+# Outils RE cote Windows contenant des binaires / sorties volumineuses
+tools/
+
+# Python
+__pycache__/
+*.pyc
+.DS_Store

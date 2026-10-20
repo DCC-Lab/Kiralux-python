@@ -1,0 +1,52 @@
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_create_image")]	public static extern int CreateImage();
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_init_image")]	public static extern sbyte InitImage(int hdl, int x, int y, P2dDataFormat px_type, P2dChannels channels, int valid_bits);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_init_image_ex")]	public static extern sbyte InitImageExternal(int hdl, ref P2dInfo info);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_info")]	public static extern sbyte GetInfo(int hdl, ref P2dInfo info);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_buf")]	public static extern IntPtr GetIntPtr(int hdl);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_data_type")]	public static extern sbyte GetDataType(int hdl);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_clear")]	public static extern sbyte Reset(int hdl);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_destroy_image")]	public static extern sbyte FreeImage(int hdl);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_copy")]	public static extern sbyte CopyImage(int hdlSrc, int hdlDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_copy_rect")]	public static extern sbyte CopyImageRect(int hdlSrc, P2dPoint srcPoint, int hdlDst, P2dPoint dstPoint, P2dRegion region);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_copy_color2channels")]	public static extern sbyte CopyColorTo3Channels(int hdlSrc, int[] hdlDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_sum_rect")]	public static extern sbyte SumRectImage(int hdlSrc, P2dRect rect, ref double sum);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_LShift")]	public static extern sbyte ShiftLBuffer(int hdlSrc, int hdlDst, int nBits);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_RShift")]	public static extern sbyte ShiftRBuffer(int hdlSrc, int hdlDst, int nBits);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_addI")]	public static extern sbyte AddToImage(int hdlSrc, int hdlDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_mulCI")]	public static extern sbyte Multiply(int hdl, double[] value);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_scale")]	public static extern sbyte Scale(int hdSrc, int hdlDst, double mValue, double aValue);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_scaleI")]	public static extern sbyte ScaleI(int hdl, double mValue, double aValue);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_adjust")]	public static extern sbyte Adjust(int hdlSrc, int hdlDst, double[] min, double[] max);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_resize")]	public static extern sbyte Resize(int hdlSrc, P2dPoint srcPoint, P2dRegion srcRegion, int hdlDst, P2dPoint dstPoint, P2dRegion dstRegion, P2dInterpolationType interprolationType = P2dInterpolationType.P2D_Lanczos);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_fast_profile")]	public static extern sbyte P2dGetFastProfile16u(int hdl_src, P2dPoint startPoint, P2dPoint endPoint, uint line_width, ushort[] result, ref uint plength);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_fast_profile")]	public static extern sbyte P2dGetFastProfile8u(int hdl_src, P2dPoint startPoint, P2dPoint endPoint, uint line_width, byte[] result, ref uint plength);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_fast_profile_f32")]	public static extern sbyte P2dGetFastProfileFloat(int hdl_src, P2dPoint startPoint, P2dPoint endPoint, uint line_width, float[] result, ref uint plength);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_profile")]	public static extern sbyte GetProfile(int hdlSrc, uint xStart, uint yStart, uint xEnd, uint yEnd, uint lineWidth, ushort[] profile, ref uint profileLength);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_lnI")]	public static extern sbyte Ln(int hdSrc);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_color_to_gray")]	public static extern sbyte ColorToGray(int hdSrc, int hdDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_color_twistI")]	public static extern sbyte ColorTwistI(int hdSrc, [MarshalAs(UnmanagedType.LPArray, SizeConst = 12)] float[,] twist);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_color_twist")]	public static extern sbyte ColorTwist(int hdSrc, int hdDst, [MarshalAs(UnmanagedType.LPArray, SizeConst = 12)] float[,] twist);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_gray_to_color")]	public static extern sbyte GrayToColor(int hdSrc, int hdDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_convert")]	public static extern sbyte Convert(int hdSrc, int hdDst);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_histogram")]	public static extern sbyte GetHistogram(int hdSrc, float lower_level, float upper_level, uint[] histData, uint histDataSize);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_histogram_rect")]	public static extern sbyte GetHistogramRect(int hdSrc, P2dRect rect, float lower_level, float upper_level, uint[] histData, uint histDataSize);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_copy_gray2color")]	public static extern sbyte CopyGrayToColor(int hdl_src, int hdl_dst, int channel);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_otsu_get_threshold")]	public static extern sbyte GetOtsuThreshold(int hdl_src, int[] pthresh);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_img_min_max")]	public static extern sbyte GetMinMax_8u(int hdl_src, byte[] min, byte[] max);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_img_min_max")]	public static extern sbyte GetMinMax_16u(int hdl_src, ushort[] min, ushort[] max);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_img_min_max_rect")]	public static extern sbyte GetMinMaxRect_8u(int hdl_src, P2dRect rect, byte[] min, byte[] max);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_img_min_max_rect")]	public static extern sbyte GetMinMaxRect_16u(int hdl_src, P2dRect rect, ushort[] min, ushort[] max);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_projection_mean")]	public static extern sbyte ProjectionMean(int hdlSrc, int hdlDst, uint srcZ, uint sizeZ, P2dProjectionAxes dstAxes);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_computer_color_bc")]	public static extern sbyte ComputerColorBC(int hdlSrc, int hdlDst, P2dRect srcRect, byte[] colorTable, double alpha, int beta);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_lut")]	public static extern sbyte ColorLookUpTableByte(int hdlSrc, int hdlDst, byte[] colorTable);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_lut")]	public static extern sbyte ColorLookUpTableUshort(int hdlSrc, int hdlDst, ushort[] colorTable);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_lut")]	public static extern sbyte LookUpTableIntptr(int hdlSrc, int hdlDst, IntPtr table);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_mirrorI")]	public static extern sbyte MirrorI(int hdlSrc, P2dAxis flip);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_one_pixel")]	public static extern sbyte GetOnePixel(int hdlSrc, P2dPoint index, IntPtr pixelValue);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_one_pixel")]	public static extern sbyte GetOnePixel8U(int hdlSrc, P2dPoint index, out byte pixelValue);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_get_one_pixel")]	public static extern sbyte GetOnePixel16U(int hdlSrc, P2dPoint index, out ushort pixelValue);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_generate_mask")]	public static extern sbyte GenerateMask(int hdl_mask, P2dRoiType mask_type, P2dPoint[] point_list, int point_list_length);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_mask_mean_stddev")]	public static extern sbyte MaskMeanStddev(int hdl_src, int hdl_mask, int x_offset, int yOffset, out double pmean, out double pstddev);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_img_mean_stddev_rect")]	public static extern sbyte MeanStddev(int hdl_src, P2dRect rect, out double pmean, out double pstddev);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_mask_min_max")]	public static extern sbyte MaskMinMax(int hdl_src, int hdl_mask, int x_offset, int y_offset, out float pmin, out float pmax);
+[DllImport("p2d_lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "p2d_rotate")]	public static extern sbyte Rotate(int hdl_src, int hdl_dst, double angle, double xShift, double yShift, P2dInterpolationType wrapType);

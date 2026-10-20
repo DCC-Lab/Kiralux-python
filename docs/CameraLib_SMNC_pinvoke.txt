@@ -1,0 +1,93 @@
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_List")]	internal static extern int List(StringBuilder cameraIds, int size);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_Open")]	internal static extern int Open(string sn);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_Close")]	internal static extern int Close();
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetFirmwareVersion")]	internal static extern int GetFirmwareVersion(StringBuilder firmwareVersion, int size);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetModelName")]	internal static extern int GetModelName(StringBuilder modelName, int size);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_Release")]	public static extern int Release();
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetExposureTime")]	internal static extern int SetExposureTime(long exposure);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetExposureTime")]	internal static extern int GetExposureTime(out long exposure);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetExposureTimeRange")]	internal static extern int GetExposureTimeRange(out long exposureTimeUsMin, out long exposureTimeUsMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetGain")]	internal static extern int SetGain(double gain);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetGain")]	internal static extern int GetGain(out double gain);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetGainRange")]	internal static extern int GetGainRange(out double gainMin, out double gainMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetGainIndexRange")]	internal static extern int GetGainIndexRange(out int gainIndexMin, out int gainIndexMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetGainFromIndex")]	internal static extern int GetGainFromIndex(int gainIndex, out double gain);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsGainSupported")]	internal static extern int GetIsGainSupported(out int isGainSupported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsGainContinuous")]	internal static extern int GetIsGainContinuous(out int isGainInDecibels);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetBlackLevel")]	internal static extern int SetBlackLevel(int blackLevel);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBlackLevel")]	internal static extern int GetBlackLevel(out int blackLevel);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBlackLevelRange")]	internal static extern int GetBlackLevelRange(out int min, out int max);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetBinX")]	internal static extern int SetBinX(int xbin);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBinX")]	internal static extern int GetBinX(out int binx);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBinXRange")]	internal static extern int GetBinXRange(out int hbinMin, out int hbinMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetBinY")]	internal static extern int SetBinY(int ybin);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBinY")]	internal static extern int GetBinY(out int biny);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBinYRange")]	internal static extern int GetBinYRange(out int vbinMin, out int vbinMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetROI")]	internal static extern int SetROI(int x, int y, int width, int height);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetROI")]	internal static extern int GetROI(out int x, out int y, out int width, out int height);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetROIRange")]	internal static extern int GetROIRange(out int upperLeftXPixelsMin, out int upperLeftYPixelsMin, out int lowerRightXPixelsMin, out int lowerRightYPixelsMin, out int upperLeftXPixelsMax, out int upperLeftYPixelsMax, out int lowerRightXPixelsMax, out int lowerRightYPixelsMax);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StartPreview")]	internal static extern int StartPreview(LiveInfo info);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StopPreview")]	internal static extern int StopPreview();
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StartSnapshot")]	internal static extern int StartSnapshot(SnapshotInfo info);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StopSnapshot")]	internal static extern int StopSnapshot();
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StartCapture")]	internal static extern int StartCapture(CaptureInfo info, PreparedCallback callback);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_StopCapture")]	internal static extern int StopCapture([MarshalAs(UnmanagedType.I1)] bool stopImmediately);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetDisconnectCallback")]	internal static extern int SetDisconnectCallback(DisconnectCallback callback);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetCallback")]	internal static extern int SetCallback(ImageCallback imageCallback, DisconnectCallback disconnectCallback, AutoExposureCallback autoExposureCallback, ImagePerformanceCallback imgPerformanceCallback);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetBitDepth")]	internal static extern int GetBitDepth(out int bitDepth);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, EntryPoint = "SMNC_GetImageCount")]	internal static extern int GetImageCount(string fileName, ref TiffInfo tiffInfo, ref uint imageCount);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetImageData")]	internal static extern int GetImageData(TiffInfo tiffInfo, uint imageNumber, ref int p2dImgHdl);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_CloseImage")]	internal static extern int CloseImage(TiffInfo tiffInfo);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, EntryPoint = "SMNC_GetJpegData")]	internal static extern int GetJpegData(string fileName, ref int p2dImgHdl);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, EntryPoint = "SMNC_CreateP2DImage")]	internal unsafe static extern int CreateP2DImage(uint width, uint height, uint dataFormat, uint channels, uint bitDepth, void* data, ref int p2dImageHdl);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetImageWidthAndHeight")]	internal static extern int GetImageWidthAndHeight(out int width, out int height);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetColorMode")]	internal static extern int GetColorMode(out int colorType);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposure")]	internal static extern int SetAutoExposure(int enbale);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposure")]	internal static extern int GetAutoExposure(out int enbale);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposureTargetIntensity")]	internal static extern int GetAutoExposureTargetIntensity(out double targetIntensity);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposureTargetIntensity")]	internal static extern int SetAutoExposureTargetIntensity(double targetIntensity);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposureMaxSaturatedPixels")]	internal static extern int GetAutoExposureMaxSaturatedPixels(out double maxSaturatedPixels);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposureMaxSaturatedPixels")]	internal static extern int SetAutoExposureMaxSaturatedPixels(double maxSaturatedPixels);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposureIsUseGain")]	internal static extern int GetAutoExposureIsUseGain(out int useGain);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposureIsUseGain")]	internal static extern int SetAutoExposureIsUseGain(int useGain);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposureUpperLimit")]	internal static extern int GetAutoExposureUpperLimit(out double exposureThreshold);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposureUpperLimit")]	internal static extern int SetAutoExposureUpperLimit(double exposureThreshold);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetAutoExposureMode")]	internal static extern int GetAutoExposureMode(out AutoExposureMode mode);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetAutoExposureMode")]	internal static extern int SetAutoExposureMode(AutoExposureMode mode);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetFrameRateControlValueRange")]	internal static extern int GetFrameRateControlValueRange(out double min, out double max);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetFrameRateControlValue")]	internal static extern int GetFrameRateControlValue(out double framerateFps);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetFrameRateControlValue")]	internal static extern int SetFrameRateControlValue(double framerateFps);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsFrameRateControlEnabled")]	internal static extern int GetIsFrameRateControlEnabled(out int enabled);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetIsFrameRateControlEnabled")]	internal static extern int SetIsFrameRateControlEnabled(int enabled);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsFrameRateControlSupported")]	internal static extern int GetIsFrameRateControlSupported(out int is_frame_rate_control_supported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsOperationModeSupported")]	internal static extern int GetIsOperationModeSupported(CameraTriggerMode mode, out int is_operation_mode_supported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsDataRateSupported")]	internal static extern int GetIsDataRateSupported(DataRate dataRate, out int is_data_rate_supported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetDataRate")]	internal static extern int GetDataRate(out DataRate dataRate);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetDataRate")]	internal static extern int SetDataRate(DataRate dataRate);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsLEDSupported")]	internal static extern int GetIsLEDSupported(out int isLedSupported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetLEDStatus")]	internal static extern int GetLEDStatus(out int isLedOn);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetLEDStatus")]	internal static extern int SetLEDStatus(int isLedOn);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SwitchAutoExposureStatus")]	internal static extern int SwitchAutoExposureStatus([MarshalAs(UnmanagedType.I1)] bool isAutoExposure);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetHotPixelCorrectionEnabled")]	internal static extern int GetHotPixelCorrectionEnabled(out int isEnabled);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetHotPixelCorrectionEnabled")]	internal static extern int SetHotPixelCorrectionEnabled(int isEnabled);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetHotPixelCorrectionThresholdRange")]	internal static extern int GetHotPixelCorrectionThresholdRange(out int min, out int max);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetHotPixelCorrectionThreshold")]	internal static extern int GetHotPixelCorrectionThreshold(out int threshold);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetHotPixelCorrectionThreshold")]	internal static extern int SetHotPixelCorrectionThreshold(int threshold);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetSensorPixelWidth")]	internal static extern int GetSensorPixelWidth(out double pixelWidth);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetSensorPixelHeight")]	internal static extern int GetSensorPixelHeight(out double pixelHeight);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetCurrentPolarizationImageType")]	internal static extern int GetCurrentPolarImageType(out int polarizationImageType);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetPolarPhaseAngle")]	internal static extern int GetPolarPhaseAngle(out int polarPhaseAngle);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetCurrentPolarizationImageType")]	internal static extern int SetCurrentPolarImageType(int polarizationImageType);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetFramesPerTriggerRange")]	internal static extern int GetFramesPerTriggerRange(out int minFrames, out int maxFrames);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetFrameTime")]	internal static extern int GetFrameTime(out int frameTime);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsEEPSupported")]	internal static extern int GetIsEEPSupported(out int is_eep_supported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetEEPStatus")]	internal static extern int GetEEPStatus(ref CameraEEPStatus eep_status);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_SetEEPEnabled")]	internal static extern int SetEEPEnabled(int is_eep_enabled, double pulse_width_us);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetSensorReadoutTime")]	internal static extern int GetSensorReadoutTime(out double sensor_readout_time_us);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsCoolingSupported")]	internal static extern int GetIsCoolingSupported(out int is_cooling_supported);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "SMNC_GetIsCoolingEnabled")]	internal static extern int GetIsCoolingEnabled(out int is_cooling_enabled);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.StdCall, EntryPoint = "SMNC_ColorTransform48to24")]	internal static extern int ColorTransform48to24(IntPtr src_pointer, ColorFormat src_format, IntPtr dst_pointer, ColorFormat dst_format);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.StdCall, EntryPoint = "SMNC_GetDefaultColorMatrix")]	internal static extern int GetDefaultColorMatrix(IntPtr white_balance_matrix, IntPtr correction_matrix);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.StdCall, EntryPoint = "SMNC_GetSRGBLUT")]	internal static extern int GetSRGBLUT(IntPtr srgb_lut);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.StdCall, EntryPoint = "SMNC_SetColorSpaceType")]	internal static extern int SetColorSpaceType(int colorSpace);
+[DllImport("CameraLib.dll", CallingConvention = CallingConvention.StdCall, EntryPoint = "SMNC_GetColorSpaceType")]	internal static extern int GetColorSpaceType(out int colorSpace);
