@@ -1,5 +1,10 @@
 # Kiralux-python
 
+> **Branche `use-usbport`** : ici `macos/kiralux.py` est bâti sur `USBPort` de [PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary) (commandes via `writeData`/`readData`, image via `readStream`) au lieu du transport `usb1` interne. Dépendance requise :
+> ```bash
+> pip install "hardwarelibrary>=2.2.0"
+> ```
+
 Pilotage **100 % Python** (libusb/pyusb) de la caméra **ThorLabs CS505MUP1**
 (Kiralux 5 MP, CMOS **polarisation** monochrome, Sony IMX250MZR) sur **macOS/Linux**,
 sans aucune librairie native ThorLabs.
@@ -63,7 +68,7 @@ Les vues polarimétriques sont calculées **paresseusement** et mises en cache.
 cycle de vie, notifications, boucle de capture et introspection des *capabilities*,
 par **composition** d'un `Kiralux` (l'USB n'est pas réécrit). Dépendance optionnelle :
 ```bash
-pip install "git+https://github.com/DCC-Lab/PyHardwareLibrary@master"
+pip install "hardwarelibrary>=2.2.0"
 python macos/kiralux_phl.py
 ```
 
