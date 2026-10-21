@@ -1,13 +1,9 @@
 # Kiralux-python
 
-> **Branche `use-usbport`** : ici `macos/kiralux.py` est bâti sur `USBPort` de [PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary) (commandes via `writeData`/`readData`, image via `readStream`) au lieu du transport `usb1` interne. Dépendance requise :
-> ```bash
-> pip install "hardwarelibrary>=2.2.0"
-> ```
-
-Pilotage **100 % Python** (libusb/pyusb) de la caméra **ThorLabs CS505MUP1**
-(Kiralux 5 MP, CMOS **polarisation** monochrome, Sony IMX250MZR) sur **macOS/Linux**,
-sans aucune librairie native ThorLabs.
+Pilotage **100 % Python** de la caméra **ThorLabs CS505MUP1** (Kiralux 5 MP, CMOS
+**polarisation** monochrome, Sony IMX250MZR) sur **macOS/Linux**, via la classe
+**`USBPort`** de [DCC-Lab/PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary)
+— **sans aucune librairie native ThorLabs**.
 
 Obtenu par reverse-engineering du protocole USB de la caméra (interopérabilité).
 
@@ -29,7 +25,7 @@ Deux clés (cf. [HANDOFF.md §6](HANDOFF.md)) : lire EP 0x83 en **transferts de 
 
 ```bash
 brew install libusb                       # Linux : dnf/apt install libusb-1.0
-pip install libusb1 numpy pillow
+pip install "hardwarelibrary>=2.2.0" numpy pillow   # tire pyusb, etc.
 # (macOS seulement, si brew est dans un préfixe non standard :)
 export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
 
@@ -37,7 +33,7 @@ python macos/polar_demo.py --exp 40000    # S0, DoLP, AoLP, fausse couleur
 python macos/continuous_capture.py --n 30 # acquisition en boucle + FPS
 ```
 La caméra doit être branchée directement sur la machine (détachée de toute VM).
-Le module `kiralux.py` localise `libusb` tout seul sur les emplacements courants.
+Le transport USB passe par la classe `USBPort` (pyusb) de PyHardwareLibrary.
 
 ### La classe `Kiralux`
 ```python
