@@ -6,14 +6,19 @@ sans aucune librairie native ThorLabs.
 
 Obtenu par reverse-engineering du protocole USB de la caméra (interopérabilité).
 
-## État
+## État — ✅ fonctionnel
 
 | | |
 |---|---|
 | Protocole USB (commandes, config, trigger, lecture) | ✅ reverse-engineeré & fonctionnel |
 | Handshake / infos (sernum, dims, température…) | ✅ |
-| Acquisition petites ROI → image propre | ✅ |
-| Acquisition plein format | ⚠️ pertes résiduelles en lecture (débit libusb-macOS) — voir [HANDOFF.md §6](HANDOFF.md) |
+| **Acquisition plein format → image propre** | ✅ ~95 MB/s, vmed≈3 (macOS & Linux) |
+| Intensité S0 (démosaïquage polar) | ✅ |
+| Raffinements (dernière ligne, DoLP/AoLP, triggers HW) | voir [HANDOFF.md §7](HANDOFF.md) |
+
+Deux clés (cf. [HANDOFF.md §6](HANDOFF.md)) : lire EP 0x83 en **transferts de 16384 o**
+(sinon ~1 MB/s), et **décoder chaque bloc de 16384 o indépendamment** (les triplets
+12-bit ne traversent pas les frontières de bloc).
 
 ## Démarrage rapide (macOS)
 

@@ -30,8 +30,11 @@ VID, PID = 0x1313, 0x4001
 EP_CMD_OUT, EP_CMD_IN, EP_IMG_IN = 0x02, 0x82, 0x83
 CMD_LEN = 1024
 HDR = 16384                      # en-tete de frame (tags TSI/FCNT/... puis padding)
-N_TRANSFERS = 64                 # transferts async concurrents
-BUF = 128 * 1024                 # taille par transfert
+BLK = 16384                      # taille de bloc USB : les triplets 12-bit NE traversent PAS
+                                 # les frontieres de 16384 o (5461 triplets + 1 o de padding/bloc)
+N_TRANSFERS = 256                # transferts async concurrents
+BUF = BLK                        # IMPORTANT: lire par bloc de 16384 (= burst) -> 95 MB/s
+                                 # (des transferts plus gros s'effondrent a ~1 MB/s)
 
 
 class Kiralux:
@@ -111,28 +114,37 @@ class Kiralux:
         self.cmd("stop")
         return data, W, H
 
+    @staticmethod
+    def _unpack(body, W, H):
+        """Decode 12-bit Mono12p en respectant les blocs de 16384 o : les triplets
+        ne traversent PAS les frontieres de bloc (5461 triplets + 1 o pad / bloc)."""
+        import numpy as np
+        tri = BLK // 3                      # 5461 triplets par bloc
+        nblk = len(body) // BLK
+        blocks = np.frombuffer(body[:nblk * BLK], np.uint8).reshape(nblk, BLK)
+        b = blocks[:, :tri * 3].reshape(-1, 3).astype(np.uint16)   # (nblk*5461, 3)
+        p = np.empty(b.shape[0] * 2, np.uint16)
+        p[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
+        p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
+        nrows = min(H, len(p) // W)
+        return p[:nrows * W].reshape(nrows, W)
+
     def grab(self, exposure_us=20000, roi=None):
         """Acquiert une frame -> ndarray uint16 (H, W), mosaique polar brute."""
-        import numpy as np
         data, W, H = self.grab_raw_bytes(exposure_us, roi)
-        row = W * 3 // 2
-        nrows = min(H, (len(data) - HDR) // row)
-        nrows -= nrows % 2
-        raw = np.frombuffer(bytes(data[HDR:HDR + nrows * row]), np.uint8).astype(np.uint16).reshape(-1, 3)
-        p = np.empty(nrows * W, np.uint16)
-        p[0::2] = raw[:, 0] | ((raw[:, 1] & 0x0F) << 8)      # Mono12p, little-endian
-        p[1::2] = (raw[:, 1] >> 4) | (raw[:, 2] << 4)
+        img = self._unpack(bytes(data[HDR:]), W, H)
         pct = 100.0 * len(data) / (HDR + W * H * 3 // 2)
-        if nrows < H:
-            print(f"[warn] frame partielle: {nrows}/{H} lignes ({pct:.1f}% recu) "
-                  f"- cf. HANDOFF.md section 6", file=sys.stderr)
-        return p.reshape(nrows, W)
+        if pct < 99.5:
+            print(f"[warn] frame partielle ({pct:.1f}% recu)", file=sys.stderr)
+        return img
 
     @staticmethod
     def polar_s0(mosaic):
         """Intensite S0 = moyenne du super-pixel 2x2 (demosaique polar 0/45/90/135)."""
         import numpy as np
-        m = mosaic.astype(np.float32)
+        H2 = mosaic.shape[0] & ~1
+        W2 = mosaic.shape[1] & ~1
+        m = mosaic[:H2, :W2].astype(np.float32)
         return (m[0::2, 0::2] + m[0::2, 1::2] + m[1::2, 0::2] + m[1::2, 1::2]) / 4.0
 
     def close(self):

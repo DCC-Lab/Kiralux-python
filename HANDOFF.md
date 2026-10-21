@@ -104,64 +104,56 @@ super-pixel 2×2**. Pour DoLP/AoLP il faut connaître la phase exacte de la tuil
 
 ---
 
-## 5. Ce qui MARCHE (prouvé sur macOS, Python pur)
+## 5. Ce qui MARCHE — ✅ COMPLET (macOS & Linux, Python pur)
 
-- Énumération, `claimInterface`, envoi/réception de commandes ASCII : **OK**.
-- Toute la séquence `exp/roi/arm/start/stop` : **OK**.
-- Décodage 12 bits + géométrie (largeur 2448 confirmée par corrélation) : **OK**.
-- **Petites ROI → image PROPRE** : ex. ROI 512×512, métriques isotropes
-  (vmed≈hmed≈16, comme la référence TSI).
-- Backend : `pyusb`/`usb1` sur `libusb` (brew), aucune lib ThorLabs.
-
----
-
-## 6. ⛔ BLOCAGE RESTANT : intégrité des données en plein format
-
-**Symptôme** : en plein format (ou grande ROI), l'image est striée
-horizontalement + moiré diagonal ; le bas de frame manque (97–99 % reçu).
-
-**Diagnostic établi** :
-- Débit de lecture obtenu via libusb/macOS ≈ **1–1.5 MB/s** seulement
-  (il faudrait ~26 MB/s : 7.5 Mo lus pendant le readout capteur de ~284 ms).
-- Deux captures de la **même scène statique** ne partagent que **6 %** d'octets
-  → pertes **non déterministes** (≈1 % d'octets perdus, éparpillés). Chaque octet
-  perdu décale tout le reste → cisaillement/striping cumulatif.
-- **Ce n'est PAS** : le hardware/lien (Windows OK même machine), ni le décodage
-  (petites ROI propres), ni la mosaïque polar (la réf. TSI brute est lisse, vmed=8),
-  ni le stride/offset/largeur (confirmés), ni un en-tête répété (aucun marqueur
-  répété trouvé).
-- **C'est** : le drainage USB3 depuis Python/libusb sur macOS n'arrive pas à garder
-  la file de transferts **sans trou** au débit de rafale requis. Le SDK TSptI /
-  CYUSB3 (Windows) y arrive via streaming noyau zéro-copie.
-
-**Tentatives faites (insuffisantes)** :
-- Lecture synchrone gros buffer → striée.
-- **Async multi-buffer** (`usb1`, 48–96 transferts de 128–256 Ko) → 97–99 % reçu,
-  nettement mieux (vmed 673→144) mais **pertes éparses résiduelles**.
-- Thread dédié pompant `handleEvents` → pas d'amélioration de débit (~1.2 MB/s).
-- **`sfr` pour ralentir le capteur** → améliore un peu, insuffisant seul.
-- Même au capteur le plus lent (`sfr 100`, frame en ~8 s) il reste des pertes
-  → le problème est bien le **débit/continuité de libusb-macOS**, pas la vitesse capteur.
-
-**⚠️ Nuance non résolue** : même à petite ROI « métrique-propre », on observe parfois
-un striping **régulier** (période ~16 lignes brutes) absent de la réf. TSI. À élucider
-(cf. pistes ci-dessous) — possible perte à intervalle régulier, ou subtilité de format.
+- Énumération, `claimInterface`, commandes ASCII, séquence `exp/roi/arm/start/stop`.
+- **Acquisition plein format → image PROPRE** (vmed≈3, comme la réf. TSI).
+- Débit **~95 MB/s**, 100 % reçu, frame en ~80 ms.
+- Backend : `usb1`/`libusb`, aucune lib ThorLabs. Testé macOS (direct) **et**
+  Linux/CentOS (usb1, natif).
 
 ---
 
-## 7. Pistes recommandées pour la suite (par priorité)
+## 6. ✅ LE PROBLÈME DE STRIPING — RÉSOLU
 
-1. **Vérité terrain octet-à-octet** : capturer la **même scène statique immobile**
-   via (a) TSI SDK sur Windows (décodage correct) et (b) USB brut, puis aligner pour
-   confirmer définitivement en-tête/packing/ordre des lignes et isoler l'artefact régulier.
-   → c'est l'idée « image Windows de référence » ; utile pour le FORMAT, pas pour
-   reconstruire des pertes aléatoires.
-2. **Débit libusb-macOS** : augmenter le nombre/å taille des transferts async,
-   tester `libusb_set_option`, buffers noyau ; envisager une extension C ou
-   `libusb` en mode zéro-copie. Benchmarker le débit brut EP 0x83 isolément.
-3. **Contournement fiable immédiat — pont réseau** : lancer l'acquisition dans la
-   VM Windows (SDK TSI, qui marche) et streamer les frames au Mac (IP Mac
-   172.16.9.191). Donne des images propres tout de suite, 100 % pilotable en Python.
+Le striping « plein format » avait **deux causes**, toutes deux corrigées dans
+`camera_usb.py` :
+
+### 6.1 Débit — taille de transfert
+Lire EP 0x83 en transferts de **16384 octets** (= la taille de burst SuperSpeed,
+`bMaxBurst=15`), avec beaucoup de transferts async concurrents (N=256).
+- Transferts de 128 Ko → **~1 MB/s** (effondré) → la caméra pace/déborde.
+- Transferts de 16384 o → **~95 MB/s**, 100 % reçu, frame en ~80 ms.
+- Référence : le SDK TSI lit lui aussi en 16384 o (vu dans le pcap : 460 transferts,
+  frame complète en **59 ms = 128 MB/s**).
+
+### 6.2 Décodage — alignement par bloc de 16384 (LA cause du striping)
+Les **triplets 12-bit ne traversent PAS les frontières de bloc de 16384 o**.
+Comme `16384 mod 3 = 1`, décoder le flux comme un continuum décale l'alignement
+des triplets de 1 octet à chaque bloc, se recalant tous les 3 blocs → **beat de
+période 3×16384 o = 13.39 lignes** = les bandes observées.
+**Fix** : décoder chaque bloc de 16384 o **indépendamment** (5461 triplets complets
+= 16383 o, + 1 o de padding ignoré par bloc). Résultat : **vmed 134 → 3** (propre).
+Voir `Kiralux._unpack()`.
+
+> Note : on récupère **2047/2048 lignes** (les 459 octets de padding de bloc = ~306 px
+> manquants). Image visuellement complète ; l'ajustement exact de la dernière ligne
+> reste un petit raffinement ouvert (le SDK, lui, rend 2048 lignes pleines).
+
+**Fausses pistes écartées en chemin** (documentées pour mémoire) : ce n'était PAS
+une perte de données libusb-macOS, ni le hardware, ni le stride/largeur, ni la
+mosaïque polar. Reproduit à l'identique sur **Linux** → bug de format/approche, pas d'OS.
+
+---
+
+## 7. Raffinements restants (optionnels)
+
+1. **Dernière ligne** : retrouver les ~306 px manquants (structure exacte du padding
+   de bloc / dernier bloc) pour un plein 2448×2048 strict.
+2. **Démosaïquage polarisation** : S0 (intensité) est implémenté (`polar_s0`). Ajouter
+   DoLP / AoLP / Stokes selon besoin — nécessite de caler la phase de la tuile 2×2
+   (cf. `polar_phase`, et le SDK `thorlabs_tsi_sdk` / repo ThorLabs Camera_Examples).
+3. **Robustesse** : gestion du timeout/retry, multi-frames (`nframes > 1`), triggers HW.
 4. **Mode dégradé** : acquérir en petites ROI / tuiles propres et recomposer ;
    ou binning (`hbin`/`vbin`) pour réduire le volume.
 
