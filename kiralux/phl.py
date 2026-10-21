@@ -12,7 +12,7 @@ The USB/protocol logic is NOT reimplemented: ``KiraluxCamera`` *owns* a ``Kiralu
 and forwards to it. The standalone driver stays usable on its own, and nothing
 Kiralux-specific lives inside hardwarelibrary.
 
-    from kiralux_phl import KiraluxCamera, ExposureCapability
+    from kiralux import KiraluxCamera, ExposureCapability
 
     cam = KiraluxCamera()
     cam.initializeDevice()                 # open -> Ready (posts will/didInitialize)
@@ -34,7 +34,7 @@ from hardwarelibrary.capabilities import Capability, notifies
 from hardwarelibrary.cameras.camera import CameraDevice
 from hardwarelibrary.validation import requireWithinRange
 
-from kiralux import Kiralux, PolarFrame
+from .camera import Kiralux, PolarFrame
 
 
 # --------------------------------------------------------------------------- #
