@@ -4,33 +4,34 @@ Controls the camera over USB on macOS/Linux with no ThorLabs native libraries,
 using the ``USBPort`` transport from DCC-Lab's PyHardwareLibrary. Obtained by
 reverse-engineering the camera's (ASCII) USB protocol — see ``protocol-analysis/``.
 
-Three entry points, all depending only on ``hardwarelibrary`` + ``numpy``:
+The main entry point is :class:`KiraluxCameraDevice`: a single PyHardwareLibrary
+``CameraDevice`` that does all the USB and protocol work itself — lifecycle,
+state machine, notifications, capture loop, exposure/gain capabilities, and
+``PolarFrame`` output — with no separate driver underneath.
 
-* :class:`Kiralux` — the simple, direct driver. ``snap()`` returns a
-  :class:`PolarFrame` carrying ``.s0`` / ``.dolp`` / ``.aolp`` / ``.falsecolor``.
-* :class:`KiraluxDevice` — the same camera described by a PyHardwareLibrary
-  ``CommandDictionary`` (see :mod:`kiralux.device`); comes with a hardware-free mock.
-* :class:`KiraluxCamera` — a PyHardwareLibrary ``CameraDevice`` adapter with the
-  state machine, notifications, capture loop and capability introspection.
-
-    from kiralux import Kiralux
-    with Kiralux() as cam:
+    from kiralux import KiraluxCameraDevice
+    with KiraluxCameraDevice() as cam:
         cam.exposure_us = 20_000
-        frame = cam.snap()        # -> PolarFrame
+        frame = cam.snap()            # -> PolarFrame (.s0 / .dolp / .aolp / .falsecolor)
+
+Also available: :class:`Kiralux`, a lightweight non-PhysicalDevice driver for
+quick scripts, and :class:`KiraluxDevice`, a variant whose protocol is described
+by a PyHardwareLibrary ``CommandDictionary`` (with a hardware-free mock).
 """
-from .camera import (
-    Kiralux,
-    PolarFrame,
-    KiraluxError,
-    unpack_mosaic,
-    hsv_to_rgb,
-)
-from .device import KiraluxDevice, KiraluxPort
-from .phl import (
-    KiraluxCamera,
+from .frame import PolarFrame, unpack_mosaic, hsv_to_rgb
+from .camera_device import KiraluxCameraDevice, Command, KiraluxError
+from .capabilities import (
     ExposureCapability,
     GainCapability,
+    BlackLevelCapability,
+    BinningCapability,
+    RegionOfInterestCapability,
+    FrameCountCapability,
+    TemperatureCapability,
+    PolarizationPhaseCapability,
 )
+from .camera import Kiralux
+from .device import KiraluxDevice, KiraluxPort
 
 try:  # populated from the installed distribution's metadata
     from importlib.metadata import version, PackageNotFoundError
@@ -43,15 +44,22 @@ except ImportError:  # pragma: no cover
     __version__ = "0+unknown"
 
 __all__ = [
-    "Kiralux",
-    "PolarFrame",
+    "KiraluxCameraDevice",
+    "Command",
     "KiraluxError",
-    "unpack_mosaic",
-    "hsv_to_rgb",
-    "KiraluxDevice",
-    "KiraluxPort",
-    "KiraluxCamera",
     "ExposureCapability",
     "GainCapability",
+    "BlackLevelCapability",
+    "BinningCapability",
+    "RegionOfInterestCapability",
+    "FrameCountCapability",
+    "TemperatureCapability",
+    "PolarizationPhaseCapability",
+    "Kiralux",
+    "KiraluxDevice",
+    "KiraluxPort",
+    "PolarFrame",
+    "unpack_mosaic",
+    "hsv_to_rgb",
     "__version__",
 ]

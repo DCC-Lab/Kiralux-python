@@ -64,13 +64,45 @@ All depend only on `hardwarelibrary` + `numpy`.
 
 | Class | Import | What for |
 |---|---|---|
-| **`Kiralux`** | `from kiralux import Kiralux` | The direct, simple driver. `snap()` -> `PolarFrame`. **Start here.** |
-| **`KiraluxDevice`** | `from kiralux import KiraluxDevice` | Same camera, vocabulary described by a PyHardwareLibrary `CommandDictionary`. Comes with a **hardware-free mock** (see [`tests/`](tests/)). |
-| **`KiraluxCamera`** | `from kiralux import KiraluxCamera` | PyHardwareLibrary `CameraDevice` adapter: state machine, notifications, capture loop, capability introspection. |
+| **`KiraluxCameraDevice`** | `from kiralux import KiraluxCameraDevice` | **The main class.** A single PyHardwareLibrary `CameraDevice` that does all the USB and protocol work itself — state machine, notifications, capture loop, exposure/gain capabilities. No separate driver underneath. |
+| **`Kiralux`** | `from kiralux import Kiralux` | A lightweight, non-`PhysicalDevice` driver for quick scripts. `snap()` -> `PolarFrame`, no state machine. |
+| **`KiraluxDevice`** | `from kiralux import KiraluxDevice` | Variant whose protocol is described by a PyHardwareLibrary `CommandDictionary`. Comes with a **hardware-free mock** (see [`tests/`](tests/)). |
 
-The choice between `Kiralux` (simple) and `KiraluxDevice` (CommandDictionary) is
-discussed in PR #2: for local single-camera use, `Kiralux` is enough; the
-`CommandDictionary` pays off for hardware-free testing / CI.
+```python
+from kiralux import KiraluxCameraDevice
+
+with KiraluxCameraDevice() as cam:       # initialize -> Ready, shutdown on exit
+    cam.exposure_us = 20_000             # Pythonic property (direct protocol)
+    cam.setExposure(20_000)              # or the notified, validated capability
+    frame = cam.snap()                   # -> PolarFrame
+    for f in cam.captureFrames(10):      # inherited capture loop
+        ...
+```
+
+`Kiralux` and `KiraluxCameraDevice` share one command vocabulary and one frame
+decoder; the difference is only whether you want the PyHardwareLibrary device
+machinery. `KiraluxDevice` (CommandDictionary) is discussed in PR #2 — it pays
+off for hardware-free testing / CI.
+
+`KiraluxCameraDevice` exposes eight PyHardwareLibrary capabilities — each a
+notified, validated, introspectable `get`/`set` pair (see `kiralux/capabilities.py`):
+
+| Capability | Methods | Range / notes |
+|---|---|---|
+| `ExposureCapability` | `get/setExposure` | microseconds |
+| `GainCapability` | `get/setGain` | 0..480 (tenths of a dB) |
+| `BlackLevelCapability` | `get/setBlackLevel` | 0..4095 ADU |
+| `BinningCapability` | `get/setBinning` | `(h, v)`, 1..16 each |
+| `RegionOfInterestCapability` | `get/setRegionOfInterest` | `(left, top, right, bottom)` |
+| `FrameCountCapability` | `get/setFrameCount` | 0..4294967280 (0 = continuous) |
+| `TemperatureCapability` | `getTemperature` | read-only, °C |
+| `PolarizationPhaseCapability` | `getPolarizationPhase` | read-only, {0,45,90,135}° |
+
+```python
+cam.capabilities()                       # -> the 8 capability classes
+cam.hasCapability(BlackLevelCapability)  # -> True
+cam.setBlackLevel(8)                     # validated (ValueError if out of range), notified
+```
 
 ## The protocol in brief
 
@@ -93,9 +125,11 @@ this was the cause of the striping).
 
 ```
 kiralux/                 the distributable package (the driver)
-  camera.py              Kiralux class + PolarFrame
+  camera_device.py       KiraluxCameraDevice (the single CameraDevice class) + Command enum
+  capabilities.py        the 8 PyHardwareLibrary capabilities the camera exposes
+  camera.py              Kiralux (lightweight standalone driver)
   device.py              KiraluxDevice + KiraluxPort (CommandDictionary variant)
-  phl.py                 KiraluxCamera (PyHardwareLibrary CameraDevice adapter)
+  frame.py               PolarFrame + 12-bit decoding (shared, pure numpy)
   protocol.json          command vocabulary (CommandDictionary)
 examples/                polar_demo.py, continuous_capture.py
 tests/                   test_command_dictionary.py (runs with no camera, via a mock)
