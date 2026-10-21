@@ -1,4 +1,4 @@
-# Images (exclues du depot)
+# Images de scène (exclues du depot)
 *.png
 *.jpg
 *.jpeg
@@ -6,17 +6,15 @@
 *.gif
 *.tif
 *.tiff
-
-# Captures binaires volumineuses / donnees brutes
-*.bin
-*.pcapng
 frame_datauri.txt
+
+# Binaires volumineux, SAUF la capture brute de reference pour l'analyse offline
+*.bin
+!macos/raw_big.bin
+*.pcapng
 
 # Code .NET decompile proprietaire ThorLabs (non redistribue)
 src/
-
-# Outils RE cote Windows contenant des binaires / sorties volumineuses
-tools/
 
 # Python
 __pycache__/
