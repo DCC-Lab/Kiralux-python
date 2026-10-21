@@ -84,6 +84,26 @@ decoder; the difference is only whether you want the PyHardwareLibrary device
 machinery. `KiraluxDevice` (CommandDictionary) is discussed in PR #2 — it pays
 off for hardware-free testing / CI.
 
+`KiraluxCameraDevice` exposes eight PyHardwareLibrary capabilities — each a
+notified, validated, introspectable `get`/`set` pair (see `kiralux/capabilities.py`):
+
+| Capability | Methods | Range / notes |
+|---|---|---|
+| `ExposureCapability` | `get/setExposure` | microseconds |
+| `GainCapability` | `get/setGain` | 0..480 (tenths of a dB) |
+| `BlackLevelCapability` | `get/setBlackLevel` | 0..4095 ADU |
+| `BinningCapability` | `get/setBinning` | `(h, v)`, 1..16 each |
+| `RegionOfInterestCapability` | `get/setRegionOfInterest` | `(left, top, right, bottom)` |
+| `FrameCountCapability` | `get/setFrameCount` | 0..4294967280 (0 = continuous) |
+| `TemperatureCapability` | `getTemperature` | read-only, °C |
+| `PolarizationPhaseCapability` | `getPolarizationPhase` | read-only, {0,45,90,135}° |
+
+```python
+cam.capabilities()                       # -> the 8 capability classes
+cam.hasCapability(BlackLevelCapability)  # -> True
+cam.setBlackLevel(8)                     # validated (ValueError if out of range), notified
+```
+
 ## The protocol in brief
 
 USB vendor interface (class `0xFF`), 5 bulk endpoints. **ASCII text** protocol,
@@ -106,6 +126,7 @@ this was the cause of the striping).
 ```
 kiralux/                 the distributable package (the driver)
   camera_device.py       KiraluxCameraDevice (the single CameraDevice class) + Command enum
+  capabilities.py        the 8 PyHardwareLibrary capabilities the camera exposes
   camera.py              Kiralux (lightweight standalone driver)
   device.py              KiraluxDevice + KiraluxPort (CommandDictionary variant)
   frame.py               PolarFrame + 12-bit decoding (shared, pure numpy)

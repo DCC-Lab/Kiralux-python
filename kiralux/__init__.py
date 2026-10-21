@@ -19,12 +19,16 @@ quick scripts, and :class:`KiraluxDevice`, a variant whose protocol is described
 by a PyHardwareLibrary ``CommandDictionary`` (with a hardware-free mock).
 """
 from .frame import PolarFrame, unpack_mosaic, hsv_to_rgb
-from .camera_device import (
-    KiraluxCameraDevice,
+from .camera_device import KiraluxCameraDevice, Command, KiraluxError
+from .capabilities import (
     ExposureCapability,
     GainCapability,
-    Command,
-    KiraluxError,
+    BlackLevelCapability,
+    BinningCapability,
+    RegionOfInterestCapability,
+    FrameCountCapability,
+    TemperatureCapability,
+    PolarizationPhaseCapability,
 )
 from .camera import Kiralux
 from .device import KiraluxDevice, KiraluxPort
@@ -41,10 +45,16 @@ except ImportError:  # pragma: no cover
 
 __all__ = [
     "KiraluxCameraDevice",
-    "ExposureCapability",
-    "GainCapability",
     "Command",
     "KiraluxError",
+    "ExposureCapability",
+    "GainCapability",
+    "BlackLevelCapability",
+    "BinningCapability",
+    "RegionOfInterestCapability",
+    "FrameCountCapability",
+    "TemperatureCapability",
+    "PolarizationPhaseCapability",
     "Kiralux",
     "KiraluxDevice",
     "KiraluxPort",

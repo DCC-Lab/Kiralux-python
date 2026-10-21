@@ -21,18 +21,25 @@ capability base classes).
 """
 from __future__ import annotations
 
-from abc import abstractmethod
 from enum import Enum
 from typing import Optional
 
 import numpy as np
 
-from hardwarelibrary.capabilities import Capability, notifies
 from hardwarelibrary.cameras.camera import CameraDevice
-from hardwarelibrary.validation import requireWithinRange
 from hardwarelibrary.communication.usbport import USBPort
 
 from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE
+from .capabilities import (
+    ExposureCapability,
+    GainCapability,
+    BlackLevelCapability,
+    BinningCapability,
+    RegionOfInterestCapability,
+    FrameCountCapability,
+    TemperatureCapability,
+    PolarizationPhaseCapability,
+)
 
 # --------------------------------------------------------------------------- #
 #  Protocol / transport constants
@@ -81,76 +88,25 @@ class Command(str, Enum):
 
 
 # --------------------------------------------------------------------------- #
-#  Camera capabilities (same shape as the library's OnOffCapability / PowerCapability)
-# --------------------------------------------------------------------------- #
-class ExposureNotification(Enum):
-    willSetExposure = "willSetExposure"
-    didSetExposure = "didSetExposure"
-    didGetExposure = "didGetExposure"
-
-
-class ExposureCapability(Capability):
-    """A device whose integration time can be read and set, in microseconds."""
-
-    unit = "us"
-    notification = ExposureNotification
-
-    @notifies(did=ExposureNotification.didGetExposure)
-    def getExposure(self) -> int:
-        return self.doGetExposure()
-
-    @notifies(will=ExposureNotification.willSetExposure, did=ExposureNotification.didSetExposure)
-    def setExposure(self, microseconds: int):
-        self.doSetExposure(microseconds)
-
-    @abstractmethod
-    def doGetExposure(self) -> int: ...
-
-    @abstractmethod
-    def doSetExposure(self, microseconds: int): ...
-
-
-class GainNotification(Enum):
-    willSetGain = "willSetGain"
-    didSetGain = "didSetGain"
-    didGetGain = "didGetGain"
-
-
-def validateGain(self, value: int):
-    requireWithinRange(value, (0, 480), "gain")
-
-
-class GainCapability(Capability):
-    """A device with a settable gain (0..480, in tenths of a dB)."""
-
-    unit = "dB"
-    notification = GainNotification
-
-    @notifies(did=GainNotification.didGetGain)
-    def getGain(self) -> int:
-        return self.doGetGain()
-
-    @notifies(will=GainNotification.willSetGain, did=GainNotification.didSetGain, validate=validateGain)
-    def setGain(self, value: int):
-        self.doSetGain(value)
-
-    @abstractmethod
-    def doGetGain(self) -> int: ...
-
-    @abstractmethod
-    def doSetGain(self, value: int): ...
-
-
-# --------------------------------------------------------------------------- #
 #  The single, self-contained driver
 # --------------------------------------------------------------------------- #
-class KiraluxCameraDevice(CameraDevice, ExposureCapability, GainCapability):
+class KiraluxCameraDevice(CameraDevice,
+                          ExposureCapability,
+                          GainCapability,
+                          BlackLevelCapability,
+                          BinningCapability,
+                          RegionOfInterestCapability,
+                          FrameCountCapability,
+                          TemperatureCapability,
+                          PolarizationPhaseCapability):
     """ThorLabs Kiralux CS505MUP1 as one PyHardwareLibrary CameraDevice.
 
     All USB and protocol work is done by this class directly. From
     PyHardwareLibrary it gets the connection lifecycle + state machine,
     notifications, the threaded capture loop (``start``/``stop``/``captureFrames``)
-    and capability introspection (``capabilities()``/``hasCapability()``).
+    and capability introspection (``capabilities()``/``hasCapability()``): exposure,
+    gain, black level, binning, region of interest, frame count, temperature and
+    polarization phase are each exposed as a capability.
     """
 
     classIdVendor = VID
@@ -276,6 +232,26 @@ class KiraluxCameraDevice(CameraDevice, ExposureCapability, GainCapability):
         self.command(Command.HBIN, int(h))
         self.command(Command.VBIN, int(v))
 
+    @property
+    def black_level(self) -> int:
+        return int(self.command(Command.BLKLVL))
+
+    @black_level.setter
+    def black_level(self, value: int):
+        self.command(Command.BLKLVL, int(value))
+
+    @property
+    def frame_count(self) -> int:
+        return int(self.command(Command.NFRAMES))
+
+    @frame_count.setter
+    def frame_count(self, value: int):
+        self.command(Command.NFRAMES, int(value))
+
+    @property
+    def polar_phase(self) -> int:
+        return int(self.command(Command.POLAR_PHASE))
+
     # -- capability hooks (notified + validated, via the mixins) ------------ #
     def doGetExposure(self) -> int:
         return self.exposure_us
@@ -288,6 +264,36 @@ class KiraluxCameraDevice(CameraDevice, ExposureCapability, GainCapability):
 
     def doSetGain(self, value: int):
         self.gain_db = value
+
+    def doGetBlackLevel(self) -> int:
+        return self.black_level
+
+    def doSetBlackLevel(self, value: int):
+        self.black_level = value
+
+    def doGetBinning(self) -> tuple:
+        return self.binning
+
+    def doSetBinning(self, binning: tuple):
+        self.binning = binning
+
+    def doGetRegionOfInterest(self) -> tuple:
+        return self.roi
+
+    def doSetRegionOfInterest(self, box: tuple):
+        self.roi = box
+
+    def doGetFrameCount(self) -> int:
+        return self.frame_count
+
+    def doSetFrameCount(self, value: int):
+        self.frame_count = value
+
+    def doGetTemperature(self) -> float:
+        return self.temperature
+
+    def doGetPolarizationPhase(self) -> int:
+        return self.polar_phase
 
     # -- acquisition -------------------------------------------------------- #
     def doCaptureFrame(self) -> PolarFrame:
@@ -317,9 +323,21 @@ if __name__ == "__main__":
     with KiraluxCameraDevice() as cam:
         print(repr(cam), "| state:", cam.state.name)
         print("capabilities:", [c.__name__ for c in cam.capabilities()])
-        print("T =", cam.temperature, "C | available:", KiraluxCameraDevice.available())
+        print("available:", KiraluxCameraDevice.available())
         cam.setExposure(20_000)
-        print("getExposure:", cam.getExposure(), cam.unit)
+        cam.setGain(0)
+        cam.setBlackLevel(5)
+        cam.setBinning((1, 1))
+        cam.setRegionOfInterest((0, 0, 2447, 2047))
+        cam.setFrameCount(1)
+        print("exposure   :", cam.getExposure(), "us")
+        print("gain       :", cam.getGain(), "dB/10")
+        print("black level:", cam.getBlackLevel(), "ADU")
+        print("binning    :", cam.getBinning())
+        print("roi        :", cam.getRegionOfInterest())
+        print("frame count:", cam.getFrameCount())
+        print("temperature:", cam.getTemperature(), "C")
+        print("polar phase:", cam.getPolarizationPhase(), "deg")
         frame = cam.snap()
         m = np.asarray(frame).astype(int)
         print("frame", repr(frame), "vmed", float(np.median(np.abs(m[1:] - m[:-1]))),
