@@ -23,27 +23,39 @@ Deux clés (cf. [HANDOFF.md §6](HANDOFF.md)) : lire EP 0x83 en **transferts de 
 ## Démarrage rapide (macOS)
 
 ```bash
-brew install libusb
+brew install libusb                       # Linux : dnf/apt install libusb-1.0
 pip install libusb1 numpy pillow
-export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib    # macOS (sur Linux: rien a faire)
+# (macOS seulement, si brew est dans un préfixe non standard :)
+export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
 
-python macos/camera_usb.py --info                     # infos (sernum, dims, temperature)
-python macos/camera_usb.py --exp 20000 --s0 --out frame.png   # 1 frame -> intensite S0
-python macos/polar_demo.py --exp 40000                # S0, DoLP, AoLP, fausse couleur
-python macos/continuous_capture.py --n 30             # acquisition continue + FPS
+python macos/polar_demo.py --exp 40000    # S0, DoLP, AoLP, fausse couleur
+python macos/continuous_capture.py --n 30 # acquisition en boucle + FPS
 ```
 La caméra doit être branchée directement sur la machine (détachée de toute VM).
+Le module `kiralux.py` localise `libusb` tout seul sur les emplacements courants.
 
-### En bibliothèque
+### La classe `Kiralux`
 ```python
-from camera_usb import Kiralux
-with Kiralux() as cam:
-    mosaic = cam.grab(exposure_us=20000)      # ndarray uint16 (2048, 2448), mosaique polar
-    S0   = Kiralux.polar_s0(mosaic)           # intensite
-    dolp = Kiralux.polar_dolp(mosaic)         # degre de polarisation 0..1
-    aolp = Kiralux.polar_aolp(mosaic)         # angle -90..90 deg
-    rgb  = Kiralux.polar_falsecolor(mosaic)   # HSV: teinte=AoLP, sat=DoLP, val=S0
+from kiralux import Kiralux
+
+with Kiralux() as cam:                  # ou Kiralux(serial="18658")
+    cam.exposure_us = 20_000            # propriétés Pythoniques, synchronisées
+    cam.gain_db     = 0                 #   avec la caméra
+    cam.roi         = (0, 0, 2447, 2047)
+    cam.binning     = (1, 1)
+    print(cam.model, cam.serial, cam.temperature)
+
+    frame = cam.snap()                  # -> PolarFrame (2048 x 2448 uint16)
+    frame.s0        # intensité totale (Stokes S0), demi-résolution
+    frame.dolp      # degré de polarisation linéaire   0..1
+    frame.aolp      # angle de polarisation linéaire   -90..90°
+    frame.stokes    # (S0, S1, S2)
+    frame.channels  # (I0, I45, I90, I135)
+    frame.falsecolor  # composite HSV (teinte=AoLP, sat=DoLP, valeur=S0) -> RGB
+
+Kiralux.available()                     # numéros de série des caméras branchées
 ```
+Les vues polarimétriques sont calculées **paresseusement** et mises en cache.
 
 ## Le protocole en bref
 
@@ -62,10 +74,14 @@ Reprise/état : [`HANDOFF.md`](HANDOFF.md) · Architecture SDK : [`docs/SDK_MAP.
 ## Organisation
 
 ```
-macos/        driver Python (camera_usb.py) + scripts d'analyse (async, ROI, format)
+macos/
+  kiralux.py            la classe Kiralux + PolarFrame (le driver)
+  polar_demo.py         exemple : S0 / DoLP / AoLP / fausse couleur
+  continuous_capture.py exemple : acquisition en boucle + FPS
+  *.py                  scripts d'analyse/RE (format, débit, Linux…) — historiques
 docs/         PROTOCOL.md, SDK_MAP.md, signatures d'API (SMNC_/tl_camera_/p2d_)
 captures/     capture USBPcap du protocole + transcript ASCII décodé
-HANDOFF.md    document de reprise (tout l'état, diagnostics, pistes)
+HANDOFF.md    document de reprise (tout l'état, diagnostics, solution)
 ```
 
 ## Licence / note

@@ -4,9 +4,10 @@
 > Objectif : piloter la caméra ThorLabs **CS505MUP1** (Kiralux 5 MP polarisation)
 > en **Python pur** depuis macOS, sans aucune librairie native ThorLabs.
 >
-> État au moment du transfert : **protocole USB 100 % reverse-engineeré et
-> fonctionnel** (commandes, config, trigger, lecture). **Blocage restant** :
-> intégrité des données en lecture plein-format sur macOS/libusb (voir §6).
+> État : **COMPLET**. Protocole USB 100 % reverse-engineeré ; acquisition plein
+> format propre (2448×2048, ~95 MB/s) ; traitement polarimétrique (S0/DoLP/AoLP).
+> Driver = `macos/kiralux.py` (classe `Kiralux` + `PolarFrame`). Le striping
+> « plein format » est résolu (cause + fix en §6).
 
 ---
 
@@ -117,7 +118,7 @@ super-pixel 2×2**. Pour DoLP/AoLP il faut connaître la phase exacte de la tuil
 ## 6. ✅ LE PROBLÈME DE STRIPING — RÉSOLU
 
 Le striping « plein format » avait **deux causes**, toutes deux corrigées dans
-`camera_usb.py` :
+`kiralux.py` :
 
 ### 6.1 Débit — taille de transfert
 Lire EP 0x83 en transferts de **16384 octets** (= la taille de burst SuperSpeed,
@@ -133,12 +134,11 @@ Comme `16384 mod 3 = 1`, décoder le flux comme un continuum décale l'alignemen
 des triplets de 1 octet à chaque bloc, se recalant tous les 3 blocs → **beat de
 période 3×16384 o = 13.39 lignes** = les bandes observées.
 **Fix** : décoder chaque bloc de 16384 o **indépendamment** (5461 triplets complets
-= 16383 o, + 1 o de padding ignoré par bloc). Résultat : **vmed 134 → 3** (propre).
-Voir `Kiralux._unpack()`.
+= 16383 o/bloc). Résultat : **vmed 134 → 3** (propre). Voir `Kiralux._decode()`.
 
-> Note : on récupère **2047/2048 lignes** (les 459 octets de padding de bloc = ~306 px
-> manquants). Image visuellement complète ; l'ajustement exact de la dernière ligne
-> reste un petit raffinement ouvert (le SDK, lui, rend 2048 lignes pleines).
+> Les octets de « queue » (1/bloc = dernier octet de chaque bloc de 16384), une fois
+> **concaténés**, forment les **306 derniers pixels** (la fin de la dernière ligne) :
+> `main + tail = 5 013 504 = 2448×2048` exact → **2048 lignes pleines**. Résolu.
 
 **Fausses pistes écartées en chemin** (documentées pour mémoire) : ce n'était PAS
 une perte de données libusb-macOS, ni le hardware, ni le stride/largeur, ni la
@@ -146,16 +146,20 @@ mosaïque polar. Reproduit à l'identique sur **Linux** → bug de format/approc
 
 ---
 
-## 7. Raffinements restants (optionnels)
+## 7. Fait depuis / raffinements possibles
 
-1. **Dernière ligne** : retrouver les ~306 px manquants (structure exacte du padding
-   de bloc / dernier bloc) pour un plein 2448×2048 strict.
-2. **Démosaïquage polarisation** : S0 (intensité) est implémenté (`polar_s0`). Ajouter
-   DoLP / AoLP / Stokes selon besoin — nécessite de caler la phase de la tuile 2×2
-   (cf. `polar_phase`, et le SDK `thorlabs_tsi_sdk` / repo ThorLabs Camera_Examples).
-3. **Robustesse** : gestion du timeout/retry, multi-frames (`nframes > 1`), triggers HW.
-4. **Mode dégradé** : acquérir en petites ROI / tuiles propres et recomposer ;
-   ou binning (`hbin`/`vbin`) pour réduire le volume.
+**Fait** : plein format 2448×2048 exact ; polarimétrie complète (Stokes S0/S1/S2,
+DoLP, AoLP, fausse-couleur HSV) dans `PolarFrame` ; API élégante `Kiralux`
+(propriétés `exposure_us`/`gain_db`/`roi`/`binning`, `snap()`, context manager,
+`available()`) ; testé macOS **et** Linux/CentOS.
+
+**Raffinements possibles** :
+1. **Mode « live » haut-FPS** : réutiliser les transferts USB entre frames et rester
+   armé (`nframes 0`/continu) au lieu de arm/start par frame (actuel ~2.4 fps plein 5 MP,
+   limité par la reconfig + allocation, pas par le transfert ~80 ms).
+2. **Calibration polarimétrique** : appliquer les matrices de correction par-pixel du
+   IMX250MZR (ce que fait le SDK TSI) pour une précision DoLP/AoLP métrologique.
+3. Triggers matériels (`hwtrig`), multi-frames (`nframes > 1`).
 
 ---
 
@@ -172,7 +176,8 @@ ThorImageRE/
 │   ├── tsi_camera_sdk_exports.txt   (132 fonctions tl_camera_)
 │   └── p2d_lib_pinvoke.txt          (52 fonctions p2d_)
 ├── macos/                  ← Python pur (pyusb/usb1/libusb) — cible macOS
-│   ├── camera_usb.py       ← driver principal (commandes OK ; lecture full à finir)
+│   ├── kiralux.py          ← classe Kiralux + PolarFrame (le driver)
+│   ├── polar_demo.py / continuous_capture.py  ← exemples
 │   ├── async_grab*.py, thread_grab.py, slow_grab.py  ← variantes de lecture async
 │   ├── roi_sweep.py        ← balaye les tailles de ROI (propre vs strié)
 │   ├── *_test.py, find_*.py, deshear.py, bruteforce.py ← diagnostics format/stride
@@ -191,6 +196,6 @@ brew install libusb
 pip install pyusb libusb1 numpy pillow
 export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib   # pour que pyusb trouve libusb
 # (ici le brew est en préfixe custom : /Users/dccote/.local/homebrew/lib)
-python3 macos/camera_usb.py --info      # handshake : sernum 18658, 2448x2048, 12 bits
+python3 -c "from kiralux import Kiralux; c=Kiralux(); print(c.model,c.serial); c.close()"
 ```
 La caméra doit être branchée sur le Mac (détachée de la VM Parallels).
