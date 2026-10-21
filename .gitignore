@@ -1,4 +1,4 @@
-# Images de scène (exclues du depot)
+# Scene images (excluded from the repo)
 *.png
 *.jpg
 *.jpeg
@@ -8,15 +8,16 @@
 *.tiff
 frame_datauri.txt
 
-# Binaires volumineux, SAUF la capture brute de reference pour l'analyse offline
+# Large binaries, EXCEPT the raw reference capture for offline analysis
 *.bin
-!macos/raw_big.bin
+!protocol-analysis/captures/raw_big.bin
 *.pcapng
 
-# Code .NET decompile proprietaire ThorLabs (non redistribue)
-src/
-
-# Python
+# Python / packaging
 __pycache__/
 *.pyc
+build/
+dist/
+*.egg-info/
+.eggs/
 .DS_Store

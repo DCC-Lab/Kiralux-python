@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kiralux"
+version = "0.1.0"
+description = "Pure-Python driver for the ThorLabs Kiralux CS505MUP1 polarization camera (macOS/Linux, no ThorLabs native libraries)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Daniel Côté", email = "dccote@cervo.ulaval.ca" }]
+keywords = ["thorlabs", "kiralux", "camera", "polarization", "usb", "microscopy", "imx250mzr"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "hardwarelibrary>=2.2.0",
+    "numpy",
+]
+
+[project.optional-dependencies]
+# Image I/O used by the scripts in examples/ (not needed by the driver itself).
+examples = ["pillow"]
+
+[project.urls]
+Homepage = "https://github.com/DCC-Lab/Kiralux-python"
+Repository = "https://github.com/DCC-Lab/Kiralux-python"
+
+[tool.setuptools]
+packages = ["kiralux"]
+
+[tool.setuptools.package-data]
+kiralux = ["protocol.json"]

@@ -1,102 +1,112 @@
-# Kiralux-python
+# kiralux
 
-Pilotage **100 % Python** de la caméra **ThorLabs CS505MUP1** (Kiralux 5 MP, CMOS
-**polarisation** monochrome, Sony IMX250MZR) sur **macOS/Linux**, via la classe
-**`USBPort`** de [DCC-Lab/PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary)
-— **sans aucune librairie native ThorLabs**.
+**100% Python** control of the **ThorLabs Kiralux CS505MUP1** camera (5 MP,
+monochrome **polarization** CMOS, Sony IMX250MZR) on **macOS/Linux**, with **no
+ThorLabs native libraries**. USB transport goes through the `USBPort` class of
+[DCC-Lab/PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary).
 
-Obtenu par reverse-engineering du protocole USB de la caméra (interopérabilité).
+Built by reverse-engineering the camera's USB protocol (interoperability) — the
+full approach and the decoding tools are in
+[`protocol-analysis/`](protocol-analysis/METHODOLOGY.md).
 
-## État — ✅ fonctionnel
-
-| | |
-|---|---|
-| Protocole USB (commandes, config, trigger, lecture) | ✅ reverse-engineeré & fonctionnel |
-| Handshake / infos (sernum, dims, température…) | ✅ |
-| **Acquisition plein format → image propre** | ✅ ~95 MB/s, vmed≈3 (macOS & Linux) |
-| Intensité S0 (démosaïquage polar) | ✅ |
-| Raffinements (dernière ligne, DoLP/AoLP, triggers HW) | voir [HANDOFF.md §7](HANDOFF.md) |
-
-Deux clés (cf. [HANDOFF.md §6](HANDOFF.md)) : lire EP 0x83 en **transferts de 16384 o**
-(sinon ~1 MB/s), et **décoder chaque bloc de 16384 o indépendamment** (les triplets
-12-bit ne traversent pas les frontières de bloc).
-
-## Démarrage rapide (macOS)
+## Installation
 
 ```bash
-brew install libusb                       # Linux : dnf/apt install libusb-1.0
-pip install "hardwarelibrary>=2.2.0" numpy pillow   # tire pyusb, etc.
-# (macOS seulement, si brew est dans un préfixe non standard :)
-export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
-
-python macos/polar_demo.py --exp 40000    # S0, DoLP, AoLP, fausse couleur
-python macos/continuous_capture.py --n 30 # acquisition en boucle + FPS
+pip install kiralux                 # pulls in hardwarelibrary + numpy
+# or, from source:
+pip install git+https://github.com/DCC-Lab/Kiralux-python
 ```
-La caméra doit être branchée directement sur la machine (détachée de toute VM).
-Le transport USB passe par la classe `USBPort` (pyusb) de PyHardwareLibrary.
 
-### La classe `Kiralux`
+libusb is required at runtime (`pip` installs it via pyusb on most platforms). If
+needed: `brew install libusb` (macOS) / `dnf|apt install libusb-1.0` (Linux). On
+macOS with a non-standard brew prefix:
+
+```bash
+export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
+```
+
+The camera must be connected directly to the machine (detached from any VM).
+
+## Quick start
+
 ```python
 from kiralux import Kiralux
 
-with Kiralux() as cam:                  # ou Kiralux(serial="18658")
-    cam.exposure_us = 20_000            # propriétés Pythoniques, synchronisées
-    cam.gain_db     = 0                 #   avec la caméra
+with Kiralux() as cam:                  # or Kiralux(serial="18658")
+    cam.exposure_us = 20_000            # properties stay in sync with the camera
+    cam.gain_db     = 0
     cam.roi         = (0, 0, 2447, 2047)
     cam.binning     = (1, 1)
     print(cam.model, cam.serial, cam.temperature)
 
     frame = cam.snap()                  # -> PolarFrame (2048 x 2448 uint16)
-    frame.s0        # intensité totale (Stokes S0), demi-résolution
-    frame.dolp      # degré de polarisation linéaire   0..1
-    frame.aolp      # angle de polarisation linéaire   -90..90°
-    frame.stokes    # (S0, S1, S2)
-    frame.channels  # (I0, I45, I90, I135)
-    frame.falsecolor  # composite HSV (teinte=AoLP, sat=DoLP, valeur=S0) -> RGB
+    frame.s0            # total intensity (Stokes S0), half-resolution
+    frame.dolp          # degree of linear polarization   0..1
+    frame.aolp          # angle of linear polarization     -90..90 deg
+    frame.stokes        # (S0, S1, S2)
+    frame.channels      # (I0, I45, I90, I135)
+    frame.falsecolor    # HSV composite (hue=AoLP, sat=DoLP, value=S0) -> RGB
 
-Kiralux.available()                     # numéros de série des caméras branchées
+Kiralux.available()                     # serial numbers of connected cameras
 ```
-Les vues polarimétriques sont calculées **paresseusement** et mises en cache.
 
-### Intégration PyHardwareLibrary (optionnelle)
-`macos/kiralux_phl.py` adapte le driver à l'écosystème [DCC-Lab/PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary) :
-`KiraluxCamera(CameraDevice, ExposureCapability, GainCapability)` — machine à états,
-cycle de vie, notifications, boucle de capture et introspection des *capabilities*,
-par **composition** d'un `Kiralux` (l'USB n'est pas réécrit). Dépendance optionnelle :
+The polarimetric views are computed **lazily** and cached.
+
 ```bash
-pip install "hardwarelibrary>=2.2.0"
-python macos/kiralux_phl.py
+python examples/polar_demo.py --exp 40000     # S0, DoLP, AoLP, false color
+python examples/continuous_capture.py --n 30  # capture loop + FPS
+# (the examples write PNGs:  pip install "kiralux[examples]")
 ```
 
-## Le protocole en bref
+## Three ways to drive the camera
 
-Interface USB vendor (classe 0xFF), 5 endpoints bulk. Protocole **texte ASCII**,
-auto-documenté (`discover`, `<cmd>.disc`) :
+All depend only on `hardwarelibrary` + `numpy`.
 
-- `0x02` OUT : commandes ASCII (buffer 1024 o, `\0`-terminé)
-- `0x82` IN  : réponses ASCII
-- `0x83` IN  : données image (en-tête 16384 o + pixels **12 bits packés Mono12p**)
+| Class | Import | What for |
+|---|---|---|
+| **`Kiralux`** | `from kiralux import Kiralux` | The direct, simple driver. `snap()` -> `PolarFrame`. **Start here.** |
+| **`KiraluxDevice`** | `from kiralux import KiraluxDevice` | Same camera, vocabulary described by a PyHardwareLibrary `CommandDictionary`. Comes with a **hardware-free mock** (see [`tests/`](tests/)). |
+| **`KiraluxCamera`** | `from kiralux import KiraluxCamera` | PyHardwareLibrary `CameraDevice` adapter: state machine, notifications, capture loop, capability introspection. |
 
-Séquence : `stop → exp <us> → hwtrig none → nframes 1 → arm → start → [lire 0x83] → stop`.
+The choice between `Kiralux` (simple) and `KiraluxDevice` (CommandDictionary) is
+discussed in PR #2: for local single-camera use, `Kiralux` is enough; the
+`CommandDictionary` pays off for hardware-free testing / CI.
 
-Détails complets : [`docs/PROTOCOL.md`](docs/PROTOCOL.md) ·
-Reprise/état : [`HANDOFF.md`](HANDOFF.md) · Architecture SDK : [`docs/SDK_MAP.md`](docs/SDK_MAP.md)
+## The protocol in brief
 
-## Organisation
+USB vendor interface (class `0xFF`), 5 bulk endpoints. **ASCII text** protocol,
+self-documenting (`discover`, `<cmd>.disc`):
+
+- `0x02` OUT: ASCII commands (1024-byte buffer, `\0`-terminated)
+- `0x82` IN : ASCII responses
+- `0x83` IN : image data (16384-byte header + **12-bit packed Mono12p** pixels)
+
+Sequence: `stop -> exp <us> -> hwtrig none -> nframes 1 -> arm -> start -> [read 0x83] -> stop`.
+
+**Two keys** to a clean image at ~95 MB/s (see
+[`protocol-analysis/METHODOLOGY.md`](protocol-analysis/METHODOLOGY.md)): read
+endpoint `0x83` in **16384-byte transfers** (otherwise ~1 MB/s), and **decode each
+16384-byte block independently** (12-bit triplets do not cross block boundaries —
+this was the cause of the striping).
+
+## Layout
 
 ```
-macos/
-  kiralux.py            la classe Kiralux + PolarFrame (le driver)
-  polar_demo.py         exemple : S0 / DoLP / AoLP / fausse couleur
-  continuous_capture.py exemple : acquisition en boucle + FPS
-  *.py                  scripts d'analyse/RE (format, débit, Linux…) — historiques
-docs/         PROTOCOL.md, SDK_MAP.md, signatures d'API (SMNC_/tl_camera_/p2d_)
-captures/     capture USBPcap du protocole + transcript ASCII décodé
-HANDOFF.md    document de reprise (tout l'état, diagnostics, solution)
+kiralux/                 the distributable package (the driver)
+  camera.py              Kiralux class + PolarFrame
+  device.py              KiraluxDevice + KiraluxPort (CommandDictionary variant)
+  phl.py                 KiraluxCamera (PyHardwareLibrary CameraDevice adapter)
+  protocol.json          command vocabulary (CommandDictionary)
+examples/                polar_demo.py, continuous_capture.py
+tests/                   test_command_dictionary.py (runs with no camera, via a mock)
+protocol-analysis/       the reverse-engineering approach + the decoding tools
+  METHODOLOGY.md         how the protocol was decoded (concise)
+  REPORT.html, docs/, captures/, tools/
+pyproject.toml           modern packaging (depends on hardwarelibrary>=2.2.0)
 ```
 
-## Licence / note
+## License / note
 
-Projet d'interopérabilité pour piloter du matériel possédé en propre.
-Les binaires et le code source propriétaires ThorLabs ne sont pas redistribués ici.
-ThorLabs, Kiralux et CS505MUP1 sont des marques de Thorlabs Inc.
+Interoperability project to control hardware we own, under the
+[MIT](LICENSE) license. ThorLabs proprietary binaries and source are not
+redistributed here. ThorLabs, Kiralux and CS505MUP1 are trademarks of Thorlabs, Inc.

@@ -1,0 +1,510 @@
+[7] >> OUT [1024] 'id'
+[10]   << IN  [1024] '000000f6480058444e4500d0d100610000534016'
+[11] >> OUT [1024] 'sernum'
+[14]   << IN  [1024] '18658'
+[15] >> OUT [1024] 'hwtrig'
+[18]   << IN  [1024] 'none hi'
+[19] >> OUT [1024] 'prnu crc 0'
+[22]   << IN  [1024] 'error 4,Invalid command'
+[25] >> OUT [1024] 'id'
+[28]   << IN  [1024] '000000f6480058444e4500d0d100610000534016'
+[29] >> OUT [1024] 'sernum'
+[32]   << IN  [1024] '18658'
+[33] >> OUT [1024] 'hwtrig'
+[36]   << IN  [1024] 'none hi'
+[37] >> OUT [1024] 'prnu crc 0'
+[40]   << IN  [1024] 'error 4,Invalid command'
+[41] >> OUT [1024] 'stop'
+[44]   << IN  [1024] 'stopped'
+[45] >> OUT [1024] 'discover'
+[48]   << IN  [1024] 'discover error echo id info ver ping model name sernum unlock camera_radix exp roi hbin vbin hot_pixel_correction stop start arm disarm hwtrig nframes state statusled temperature image_dims image_width image_height pixel_bit_depth pixel_size pixel_width_nm pixel_height_nm pixel_byte_ordering vflip hflip gain blklvl imgpack debug_radix gpo time frametime color color_filter_phase ir_filter_type color_correction_matrix output_color_space default_white_balance_matrix polar_phase sensor_readout_time tags nvstor sfr pixel_clock_count_base'
+[49] >> OUT [1024] 'gain.disc'
+[52]   << IN  [1024] '"{"gain": {"desc": "applies gain factor to image","syntax": "gain [dB]","options": [{"factor": "integer","min": 0,"max": 480,"default": 0}],"min": 0,"max": 480,"inc": 1,"default": 0,"flags": ["w"],"response": ["integer"]}}"'
+[53] >> OUT [1024] 'exp 20000'
+[56]   << IN  [1024] '20000'
+[57] >> OUT [1024] 'hwtrig none'
+[60]   << IN  [1024] 'none hi'
+[61] >> OUT [1024] 'nframes 1'
+[64]   << IN  [1024] '1'
+[65] >> OUT [1024] 'image_width'
+[68]   << IN  [1024] '2448'
+[69] >> OUT [1024] 'image_height'
+[72]   << IN  [1024] '2048'
+[73] >> OUT [1024] 'image_width'
+[76]   << IN  [1024] '2448'
+[77] >> OUT [1024] 'image_height'
+[80]   << IN  [1024] '2048'
+[81] >> OUT [1024] 'pixel_bit_depth'
+[84]   << IN  [1024] '12'
+[85] >> OUT [1024] 'image_width'
+[88]   << IN  [1024] '2448'
+[89] >> OUT [1024] 'image_height'
+[92]   << IN  [1024] '2048'
+[93] >> OUT [1024] 'arm'
+[96]   << IN  [1024] 'armed'
+[97] >> OUT [1024] 'start'
+[100]   << IN  [1024] 'running'
+[111] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[113] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[115] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[116] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[117] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[118] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[119] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[120] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[122] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[125] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[126] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[128] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[129] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[131] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[132] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[134] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[136] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[138] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[139] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[140] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[145] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[146] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[147] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[148] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[154] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[156] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[157] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[159] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[161] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[162] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[163] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[166] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[167] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[168] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[170] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[174] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[175] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[176] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[181] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[182] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[183] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[184] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[186] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[191] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[192] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[194] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[195] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[196] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[199] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[202] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[205] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[207] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[210] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[213] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[221] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[227] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[232] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[237] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[241] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[246] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[251] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[256] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[261] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[264] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[269] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[274] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[279] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[286] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[290] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[300] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[303] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[307] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[312] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[316] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[321] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[325] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[329] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[334] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[337] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[341] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[345] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[349] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[353] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[356] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[361] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[367] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[372] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[378] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[386] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[388] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[394] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[399] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[403] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[407] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[408] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[409] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[410] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[411] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[416] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[420] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[425] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[428] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[432] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[435] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[439] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[442] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[447] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[453] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[456] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[462] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[465] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[468] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[472] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[479] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[485] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[489] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[494] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[499] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[504] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[508] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[512] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[516] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[517] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[521] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[526] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[529] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[533] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[537] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[539] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[544] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[546] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[551] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[556] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[562] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[566] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[571] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[573] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[578] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[581] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[586] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[589] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[597] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[602] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[608] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[614] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[617] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[619] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[621] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[626] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[630] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[635] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[639] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[642] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[650] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[651] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[652] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[653] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[654] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[655] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[656] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[657] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[658] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[659] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[660] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[661] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[662] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[663] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[664] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[665] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[666] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[667] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[668] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[669] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[670] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[671] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[672] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[673] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[674] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[676] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[678] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[683] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[688] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[693] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[700] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[715] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[717] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[719] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[722] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[726] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[727] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[735] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[739] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[740] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[741] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[742] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[743] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[744] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[745] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[746] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[747] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[748] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[749] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[750] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[751] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[752] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[753] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[754] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[755] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[756] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[757] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[758] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[759] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[760] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[761] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[762] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[763] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[764] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[765] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[766] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[767] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[768] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[769] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[770] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[771] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[772] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[773] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[774] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[775] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[776] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[777] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[778] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[779] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[780] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[781] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[782] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[783] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[784] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[785] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[786] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[787] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[788] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[789] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[790] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[791] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[792] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[793] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[794] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[795] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[796] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[797] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[798] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[799] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[800] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[801] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[802] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[803] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[804] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[805] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[806] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[807] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[808] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[809] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[810] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[811] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[812] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[813] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[814] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[815] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[816] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[817] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[818] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[819] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[820] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[821] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[822] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[825] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[830] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[835] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[839] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[845] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[848] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[851] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[855] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[862] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[864] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[865] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[868] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[878] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[883] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[884] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[888] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[892] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[896] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[899] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[902] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[904] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[906] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[911] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[916] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[918] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[927] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[935] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[942] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[950] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[959] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[962] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[965] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[968] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[970] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[975] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[976] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[977] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[978] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[979] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[980] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[981] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[982] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[983] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[984] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[985] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[986] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[987] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[988] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[989] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[990] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[991] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[992] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[993] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[994] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[995] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[996] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[997] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[998] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[999] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1000] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1001] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1002] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1003] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1004] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1005] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1006] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1007] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1008] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1009] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1010] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1011] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1012] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1015] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1019] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1028] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1032] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1041] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1045] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1050] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1054] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1058] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1063] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1068] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1073] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1074] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1075] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1076] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1077] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1079] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1081] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1085] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1086] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1087] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1088] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1094] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1097] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1098] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1099] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1100] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1101] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1102] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1103] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1104] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1105] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1106] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1107] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1108] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1113] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1114] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1120] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1125] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1128] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1131] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1132] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1133] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1134] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1135] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1136] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1137] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1138] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1139] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1140] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1141] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1142] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1143] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1144] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1147] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1151] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1153] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1161] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1167] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1168] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1170] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1171] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1172] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1173] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1175] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1176] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1178] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1179] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1180] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1181] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1182] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1183] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1184] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1185] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1186] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1187] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1188] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1189] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1190] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1191] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1192] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1193] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1194] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1195] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1196] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1197] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1198] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1199] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1200] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1201] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1202] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1203] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1204] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1205] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1206] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1207] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1208] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1209] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1210] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1211] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1212] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1213] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1214] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1215] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1216] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1217] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1218] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1219] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1220] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1221] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1222] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1223] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1224] <<< IMAGE/DATA IN  ep=0x83 dataLength=16384 bytes >>>
+[1277] >> OUT [1024] 'stop'
+[1280]   << IN  [1024] 'stopped'
+[1281] >> OUT [1024] 'stop'
+[1284]   << IN  [1024] 'stopped'
