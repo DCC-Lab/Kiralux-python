@@ -24,13 +24,26 @@ Deux clés (cf. [HANDOFF.md §6](HANDOFF.md)) : lire EP 0x83 en **transferts de 
 
 ```bash
 brew install libusb
-pip install libusb1 pyusb numpy pillow
-export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
+pip install libusb1 numpy pillow
+export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib    # macOS (sur Linux: rien a faire)
 
-python macos/camera_usb.py --info
-python macos/camera_usb.py --roi 712 512 1735 1535 --exp 20000 --s0 --out frame.png
+python macos/camera_usb.py --info                     # infos (sernum, dims, temperature)
+python macos/camera_usb.py --exp 20000 --s0 --out frame.png   # 1 frame -> intensite S0
+python macos/polar_demo.py --exp 40000                # S0, DoLP, AoLP, fausse couleur
+python macos/continuous_capture.py --n 30             # acquisition continue + FPS
 ```
 La caméra doit être branchée directement sur la machine (détachée de toute VM).
+
+### En bibliothèque
+```python
+from camera_usb import Kiralux
+with Kiralux() as cam:
+    mosaic = cam.grab(exposure_us=20000)      # ndarray uint16 (2048, 2448), mosaique polar
+    S0   = Kiralux.polar_s0(mosaic)           # intensite
+    dolp = Kiralux.polar_dolp(mosaic)         # degre de polarisation 0..1
+    aolp = Kiralux.polar_aolp(mosaic)         # angle -90..90 deg
+    rgb  = Kiralux.polar_falsecolor(mosaic)   # HSV: teinte=AoLP, sat=DoLP, val=S0
+```
 
 ## Le protocole en bref
 

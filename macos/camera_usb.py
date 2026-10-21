@@ -48,7 +48,18 @@ class Kiralux:
             self.h.setAutoDetachKernelDriver(True)
         except Exception:
             pass
+        try:
+            if self.h.kernelDriverActive(0):
+                self.h.detachKernelDriver(0)
+        except Exception:
+            pass
         self.h.claimInterface(0)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
 
     # -- protocole texte ASCII --------------------------------------------
     def cmd(self, text, timeout=3000):
@@ -109,25 +120,42 @@ class Kiralux:
             try: t.cancel()
             except Exception: pass
         t1 = time.monotonic()
-        while st["a"] > 0 and time.monotonic() - t1 < 0.5:
-            self.ctx.handleEventsTimeout(0.02)
+        while st["a"] > 0 and time.monotonic() - t1 < 0.15:
+            self.ctx.handleEventsTimeout(0.005)
         self.cmd("stop")
         return data, W, H
 
     @staticmethod
     def _unpack(body, W, H):
-        """Decode 12-bit Mono12p en respectant les blocs de 16384 o : les triplets
-        ne traversent PAS les frontieres de bloc (5461 triplets + 1 o pad / bloc)."""
+        """Decode 12-bit Mono12p en respectant la structure par bloc de 16384 o.
+
+        Chaque bloc = 16383 octets "principaux" (5461 triplets) + 1 octet de queue.
+        Les triplets ne traversent PAS les frontieres de bloc (16384 mod 3 = 1, sinon
+        l'alignement derive de 1 o/bloc -> striping periodique). Les octets de queue,
+        concatenes, forment la FIN de l'image (les derniers pixels)."""
         import numpy as np
-        tri = BLK // 3                      # 5461 triplets par bloc
+        npix = W * H
         nblk = len(body) // BLK
-        blocks = np.frombuffer(body[:nblk * BLK], np.uint8).reshape(nblk, BLK)
-        b = blocks[:, :tri * 3].reshape(-1, 3).astype(np.uint16)   # (nblk*5461, 3)
-        p = np.empty(b.shape[0] * 2, np.uint16)
-        p[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
-        p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
-        nrows = min(H, len(p) // W)
-        return p[:nrows * W].reshape(nrows, W)
+
+        def tri(b3):
+            b3 = b3.astype(np.uint16)
+            p = np.empty(b3.shape[0] * 2, np.uint16)
+            p[0::2] = b3[:, 0] | ((b3[:, 1] & 0x0F) << 8)
+            p[1::2] = (b3[:, 1] >> 4) | (b3[:, 2] << 4)
+            return p
+
+        full = np.frombuffer(body[:nblk * BLK], np.uint8).reshape(nblk, BLK)
+        px_main = tri(full[:, :16383].reshape(-1, 3))
+        # octets de queue (1/bloc) + reste eventuel apres les blocs pleins
+        extra = np.concatenate([full[:, 16383],
+                                np.frombuffer(body[nblk * BLK:], np.uint8)])
+        ne = len(extra) // 3
+        px_tail = tri(extra[:ne * 3].reshape(-1, 3)) if ne else np.empty(0, np.uint16)
+
+        allpx = np.concatenate([px_main, px_tail])
+        if len(allpx) < npix:                       # securite (ROI non standard)
+            allpx = np.concatenate([allpx, np.zeros(npix - len(allpx), np.uint16)])
+        return allpx[:npix].reshape(H, W)
 
     def grab(self, exposure_us=20000, roi=None):
         """Acquiert une frame -> ndarray uint16 (H, W), mosaique polar brute."""
@@ -138,14 +166,72 @@ class Kiralux:
             print(f"[warn] frame partielle ({pct:.1f}% recu)", file=sys.stderr)
         return img
 
+    # -- traitement polarisation (capteur Sony IMX250MZR, tuile 2x2) ------
+    # Arrangement par defaut de la tuile 2x2 (haut-gauche, haut-droit, bas-gauche, bas-droit):
+    #   [ 90°  45° ]
+    #   [ 135°  0° ]
     @staticmethod
-    def polar_s0(mosaic):
-        """Intensite S0 = moyenne du super-pixel 2x2 (demosaique polar 0/45/90/135)."""
+    def polar_channels(mosaic):
+        """Separe la mosaique en 4 images (I0, I45, I90, I135), demi-resolution."""
         import numpy as np
-        H2 = mosaic.shape[0] & ~1
-        W2 = mosaic.shape[1] & ~1
+        H2 = mosaic.shape[0] & ~1; W2 = mosaic.shape[1] & ~1
         m = mosaic[:H2, :W2].astype(np.float32)
-        return (m[0::2, 0::2] + m[0::2, 1::2] + m[1::2, 0::2] + m[1::2, 1::2]) / 4.0
+        I90 = m[0::2, 0::2]; I45 = m[0::2, 1::2]
+        I135 = m[1::2, 0::2]; I0 = m[1::2, 1::2]
+        return I0, I45, I90, I135
+
+    @classmethod
+    def polar_stokes(cls, mosaic):
+        """Parametres de Stokes lineaires (S0, S1, S2), demi-resolution."""
+        I0, I45, I90, I135 = cls.polar_channels(mosaic)
+        S0 = (I0 + I45 + I90 + I135) / 2.0      # intensite totale
+        S1 = I0 - I90
+        S2 = I45 - I135
+        return S0, S1, S2
+
+    @classmethod
+    def polar_s0(cls, mosaic):
+        """Intensite totale S0 (demi-resolution)."""
+        return cls.polar_stokes(mosaic)[0]
+
+    @classmethod
+    def polar_dolp(cls, mosaic):
+        """Degre de polarisation lineaire (DoLP), 0..1."""
+        import numpy as np
+        S0, S1, S2 = cls.polar_stokes(mosaic)
+        return np.sqrt(S1 * S1 + S2 * S2) / np.maximum(S0, 1e-6)
+
+    @classmethod
+    def polar_aolp(cls, mosaic, degrees=True):
+        """Angle de polarisation lineaire (AoLP). degrees=True -> -90..90 deg."""
+        import numpy as np
+        _, S1, S2 = cls.polar_stokes(mosaic)
+        a = 0.5 * np.arctan2(S2, S1)
+        return np.degrees(a) if degrees else a
+
+    @classmethod
+    def polar_falsecolor(cls, mosaic):
+        """Rendu HSV: teinte=AoLP, saturation=DoLP, valeur=S0. -> RGB uint8."""
+        import numpy as np
+        S0, S1, S2 = cls.polar_stokes(mosaic)
+        dolp = np.clip(np.sqrt(S1 * S1 + S2 * S2) / np.maximum(S0, 1e-6), 0, 1)
+        aolp = (0.5 * np.arctan2(S2, S1) + np.pi / 2) / np.pi     # 0..1
+        v = S0 - np.percentile(S0, 1)
+        v = np.clip(v / max(np.percentile(S0, 99) - np.percentile(S0, 1), 1), 0, 1)
+        import colorsys
+        hsv = np.stack([aolp, dolp, v], axis=-1)
+        # conversion vectorisee HSV->RGB
+        h6 = hsv[..., 0] * 6.0
+        c = hsv[..., 2] * hsv[..., 1]
+        x = c * (1 - np.abs(h6 % 2 - 1))
+        m = hsv[..., 2] - c
+        z = np.zeros_like(c)
+        i = h6.astype(int) % 6
+        r = np.select([i==0,i==1,i==2,i==3,i==4,i==5],[c,x,z,z,x,c])
+        g = np.select([i==0,i==1,i==2,i==3,i==4,i==5],[x,c,c,x,z,z])
+        b = np.select([i==0,i==1,i==2,i==3,i==4,i==5],[z,z,x,c,c,x])
+        rgb = np.stack([r+m, g+m, b+m], axis=-1)
+        return (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
 
     def close(self):
         try: self.h.releaseInterface(0)
