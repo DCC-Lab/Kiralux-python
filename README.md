@@ -64,9 +64,9 @@ All depend only on `hardwarelibrary` + `numpy`.
 
 | Class | Import | What for |
 |---|---|---|
-| **`KiraluxCameraDevice`** | `from kiralux import KiraluxCameraDevice` | **The main class.** A single PyHardwareLibrary `CameraDevice` that does all the USB and protocol work itself — state machine, notifications, capture loop, exposure/gain capabilities. No separate driver underneath. |
+| **`KiraluxCameraDevice`** | `from kiralux import KiraluxCameraDevice` | **The main class.** A single PyHardwareLibrary `CameraDevice`: state machine, notifications, capture loop, eight capabilities. Its command dialog goes through a `CommandDictionary` (`protocol.json`), so the whole device — capabilities included — runs against a **hardware-free mock** (see [`tests/test_camera_device_mock.py`](tests/)). |
 | **`Kiralux`** | `from kiralux import Kiralux` | A lightweight, non-`PhysicalDevice` driver for quick scripts. `snap()` -> `PolarFrame`, no state machine. |
-| **`KiraluxDevice`** | `from kiralux import KiraluxDevice` | Variant whose protocol is described by a PyHardwareLibrary `CommandDictionary`. Comes with a **hardware-free mock** (see [`tests/`](tests/)). |
+| **`KiraluxDevice`** | `from kiralux import KiraluxDevice` | A thinner `PhysicalDevice` built on the same `CommandDictionary`, without the camera capabilities. |
 
 ```python
 from kiralux import KiraluxCameraDevice

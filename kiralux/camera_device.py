@@ -1,11 +1,15 @@
 """The Kiralux CS505MUP1 as a single PyHardwareLibrary ``CameraDevice``.
 
 ``KiraluxCameraDevice`` does everything in one class: it owns the USB port,
-speaks the camera's ASCII command protocol directly, exposes exposure and gain
-as PyHardwareLibrary capabilities, and turns a captured frame into a
-:class:`~kiralux.frame.PolarFrame`. There is no separate standalone driver
-underneath and no composition — the lifecycle hooks (``doInitializeDevice`` /
-``doCaptureFrame`` / ``doShutdownDevice``) carry out the USB work themselves.
+drives the camera's command dialog through a PyHardwareLibrary
+``CommandDictionary`` (``self.protocol`` + ``performTransaction``, framed by
+:class:`~kiralux.device.KiraluxPort`), exposes eight features as capabilities,
+and turns a captured frame into a :class:`~kiralux.frame.PolarFrame`. There is
+no separate standalone driver underneath and no composition — the lifecycle
+hooks (``doInitializeDevice`` / ``doCaptureFrame`` / ``doShutdownDevice``) carry
+out the work themselves. The vocabulary lives in ``protocol.json``; the
+:class:`Command` enum is kept as the vocabulary of record that
+``validate_vocabulary`` checks against the camera's live ``discover`` list.
 
     from kiralux import KiraluxCameraDevice
 
@@ -27,9 +31,10 @@ from typing import Optional
 import numpy as np
 
 from hardwarelibrary.cameras.camera import CameraDevice
-from hardwarelibrary.communication.usbport import USBPort
+from hardwarelibrary.communication.protocol import CommandDictionary
 
 from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE
+from .device import KiraluxPort, PROTOCOL_PATH
 from .capabilities import (
     ExposureCapability,
     GainCapability,
@@ -56,8 +61,10 @@ class KiraluxError(RuntimeError):
 class Command(str, Enum):
     """The camera's command vocabulary, mirroring what ``discover`` reports.
 
-    Members are ``str`` so they can be used directly;
-    :meth:`KiraluxCameraDevice.command` also accepts a plain string.
+    The protocol dialog goes through the ``CommandDictionary`` in
+    ``protocol.json``; this enum is the vocabulary of record that
+    :meth:`KiraluxCameraDevice.validate_vocabulary` checks against the live
+    ``discover`` list to catch firmware drift.
     """
     # protocol / meta
     DISCOVER = "discover"; ERROR = "error"; ECHO = "echo"; PING = "ping"
@@ -112,12 +119,11 @@ class KiraluxCameraDevice(CameraDevice,
     classIdVendor = VID
     classIdProduct = PID
 
-    def __init__(self, serialNumber: Optional[str] = None):
+    def __init__(self, serialNumber: Optional[str] = None, port=None):
         super().__init__(serialNumber, self.classIdProduct, self.classIdVendor)
         self.serial: Optional[str] = None
-        self.commandEndPoint = None
-        self.responseEndPoint = None
         self.imageEndPoint = None
+        self.port = port   # None -> real KiraluxPort; inject a ProtocolDebugPort to mock
 
     @staticmethod
     def available() -> list[str]:
@@ -133,16 +139,17 @@ class KiraluxCameraDevice(CameraDevice,
 
     # -- lifecycle hooks ---------------------------------------------------- #
     def doInitializeDevice(self):
-        wanted = None if self.serialNumber in (".*", None) else self.serialNumber
-        self.port = USBPort(idVendor=VID, idProduct=PID, serialNumber=wanted, interfaceNumber=0)
-        self.port.open()
-        self.port.defaultTimeout = 3000
-        self.commandEndPoint = self.port.endPointForAddress(EP_COMMAND)
-        self.responseEndPoint = self.port.endPointForAddress(EP_RESPONSE)
-        self.imageEndPoint = self.port.endPointForAddress(EP_IMAGE)
-        self.command(Command.STOP)
-        self.serial = self.command(Command.SERNUM)
-        self.version = self.command(Command.MODEL)
+        if self.port is None:
+            wanted = None if self.serialNumber in (".*", None) else self.serialNumber
+            self.port = KiraluxPort(serialNumber=wanted)
+            self.port.open()
+            self.imageEndPoint = self.port.endPointForAddress(EP_IMAGE)
+        if self.protocol is None:
+            self.protocol = CommandDictionary.fromFile(PROTOCOL_PATH)
+        self.performTransaction("STOP")
+        self.serial = self.performTransaction("SERNUM")["serial"]
+        self.version = self.performTransaction("MODEL")["model"]
+        self.validate_vocabulary()
 
     def doShutdownDevice(self):
         super().doShutdownDevice()           # stop the capture loop if running
@@ -161,96 +168,96 @@ class KiraluxCameraDevice(CameraDevice,
         return f"<KiraluxCameraDevice {self.version} sn={self.serial}>"
 
     # -- protocol ----------------------------------------------------------- #
-    def command(self, name, *args) -> str:
-        """Send a command (a :class:`Command` or plain string) with optional
-        arguments, and return the camera's text response.
+    def validate_vocabulary(self):
+        """Warn if the camera's live ``discover`` list differs from :class:`Command`.
 
-        Raises :class:`KiraluxError` on an ``error ...`` reply. With no argument
-        most commands report their current value (``command(Command.EXP)``).
+        The protocol dialog itself goes through the :class:`CommandDictionary`
+        (``performTransaction``); this keeps the :class:`Command` enum as the
+        vocabulary of record and surfaces firmware drift (a command we name that
+        the camera no longer has, or one it gained that we don't know) without
+        blocking use.
         """
-        text = name.value if isinstance(name, Command) else str(name)
-        if args:
-            text = text + " " + " ".join(str(a) for a in args)
-        self.port.writeData((text.encode() + b"\x00").ljust(COMMAND_SIZE, b"\x00"),
-                            endPoint=self.commandEndPoint)
-        reply = bytes(self.port.readData(COMMAND_SIZE, endPoint=self.responseEndPoint))
-        reply = reply.split(b"\x00")[0].decode("latin1").strip()
-        if reply.startswith("error"):
-            raise KiraluxError(f"{text!r} -> {reply}")
-        return reply
-
-    def describe(self, command) -> str:
-        """Return the camera's self-documentation (JSON) for a command."""
-        name = command.value if isinstance(command, Command) else str(command)
-        return self.command(name + ".disc")
+        import warnings
+        reported = set(self.performTransaction("DISCOVER")["vocabulary"].split())
+        known = {c.value for c in Command}
+        unknown, missing = reported - known, known - reported
+        if unknown or missing:
+            warnings.warn(
+                f"Kiralux command-set drift vs firmware: unknown to driver="
+                f"{sorted(unknown)}, not reported by camera={sorted(missing)}",
+                stacklevel=2)
 
     # -- identity ----------------------------------------------------------- #
     @property
     def sensor_size(self) -> tuple[int, int]:
-        return int(self.command(Command.IMAGE_WIDTH)), int(self.command(Command.IMAGE_HEIGHT))
+        return (self.performTransaction("IMAGE_WIDTH")["width"],
+                self.performTransaction("IMAGE_HEIGHT")["height"])
 
     @property
     def bit_depth(self) -> int:
-        return int(self.command(Command.PIXEL_BIT_DEPTH))
+        return self.performTransaction("PIXEL_BIT_DEPTH")["depth"]
 
     @property
     def temperature(self) -> float:
-        return float(self.command(Command.TEMPERATURE))
+        return self.performTransaction("TEMPERATURE")["temperature"]
 
-    # -- settings (direct properties) --------------------------------------- #
+    # -- settings (direct properties, via the CommandDictionary) ------------ #
     @property
     def exposure_us(self) -> int:
-        return int(self.command(Command.EXP))
+        return self.performTransaction("EXP_GET")["exposure"]
 
     @exposure_us.setter
     def exposure_us(self, microseconds: int):
-        self.command(Command.EXP, int(microseconds))
+        self.performTransaction("EXP_SET", exposure=int(microseconds))
 
     @property
     def gain_db(self) -> int:
-        return int(self.command(Command.GAIN))
+        return self.performTransaction("GAIN_GET")["gain"]
 
     @gain_db.setter
     def gain_db(self, value: int):
-        self.command(Command.GAIN, int(value))
+        self.performTransaction("GAIN_SET", gain=int(value))
 
     @property
     def roi(self) -> tuple[int, int, int, int]:
-        return tuple(int(x) for x in self.command(Command.ROI).split())
+        r = self.performTransaction("ROI_GET")
+        return (r["left"], r["top"], r["right"], r["bottom"])
 
     @roi.setter
     def roi(self, box: tuple[int, int, int, int]):
-        self.command(Command.ROI, *box)
+        left, top, right, bottom = box
+        self.performTransaction("ROI_SET", left=left, top=top, right=right, bottom=bottom)
 
     @property
     def binning(self) -> tuple[int, int]:
-        return int(self.command(Command.HBIN)), int(self.command(Command.VBIN))
+        return (self.performTransaction("HBIN_GET")["hbin"],
+                self.performTransaction("VBIN_GET")["vbin"])
 
     @binning.setter
     def binning(self, hv: tuple[int, int]):
         h, v = hv
-        self.command(Command.HBIN, int(h))
-        self.command(Command.VBIN, int(v))
+        self.performTransaction("HBIN_SET", hbin=int(h))
+        self.performTransaction("VBIN_SET", vbin=int(v))
 
     @property
     def black_level(self) -> int:
-        return int(self.command(Command.BLKLVL))
+        return self.performTransaction("BLKLVL_GET")["blacklevel"]
 
     @black_level.setter
     def black_level(self, value: int):
-        self.command(Command.BLKLVL, int(value))
+        self.performTransaction("BLKLVL_SET", blacklevel=int(value))
 
     @property
     def frame_count(self) -> int:
-        return int(self.command(Command.NFRAMES))
+        return self.performTransaction("NFRAMES_GET")["nframes"]
 
     @frame_count.setter
     def frame_count(self, value: int):
-        self.command(Command.NFRAMES, int(value))
+        self.performTransaction("NFRAMES_SET", nframes=int(value))
 
     @property
     def polar_phase(self) -> int:
-        return int(self.command(Command.POLAR_PHASE))
+        return self.performTransaction("POLAR_PHASE")["phase"]
 
     # -- capability hooks (notified + validated, via the mixins) ------------ #
     def doGetExposure(self) -> int:
@@ -301,15 +308,15 @@ class KiraluxCameraDevice(CameraDevice,
 
         The CameraDevice capture loop (``captureFrames``/``start``) calls this.
         """
-        self.command(Command.STOP)
-        self.command(Command.HWTRIG, "none")
-        self.command(Command.NFRAMES, 1)
+        self.performTransaction("STOP")
+        self.performTransaction("HWTRIG_SET", mode="none")
+        self.performTransaction("NFRAMES_SET", nframes=1)
         width, height = self.sensor_size
-        self.command(Command.ARM)
-        self.command(Command.START)
+        self.performTransaction("ARM")
+        self.performTransaction("START")
         raw = self.port.readStream(HEADER_SIZE + width * height * 3 // 2,
                                    endPoint=self.imageEndPoint, timeout=3000)
-        self.command(Command.STOP)
+        self.performTransaction("STOP")
         return PolarFrame(unpack_mosaic(bytes(raw), width, height))
 
     def snap(self, exposure_us: Optional[int] = None) -> PolarFrame:
