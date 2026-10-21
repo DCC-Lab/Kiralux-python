@@ -32,7 +32,7 @@ from hardwarelibrary.communication.usbport import USBPort
 from hardwarelibrary.communication.protocol import CommandDictionary
 
 VID, PID = 0x1313, 0x4001
-EP_COMMAND, EP_RESPONSE = 0x02, 0x82
+EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83
 COMMAND_SIZE = 1024
 
 PROTOCOL_PATH = os.path.join(os.path.dirname(__file__), "protocol.json")
@@ -188,7 +188,7 @@ class KiraluxDevice(PhysicalDevice):
         protocol-described; only the image bytes — binary, not a text command —
         are read off EP 0x83 with ``readStream`` and demosaiced by ``kiralux``.
         """
-        from .camera import unpack_mosaic, PolarFrame, EP_IMAGE, HEADER_SIZE
+        from .frame import unpack_mosaic, PolarFrame, HEADER_SIZE
 
         if exposure_us is not None:
             self.exposure_us = exposure_us
