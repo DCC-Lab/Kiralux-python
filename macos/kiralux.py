@@ -7,7 +7,7 @@ high-throughput bulk read added in
 https://github.com/DCC-Lab/PyHardwareLibrary/pull/120. The high-level API
 (``snap`` -> ``PolarFrame`` with ``.s0``/``.dolp``/``.aolp``) is unchanged.
 
-    pip install "git+https://github.com/DCC-Lab/PyHardwareLibrary@master"   # once PR #120 is merged
+    pip install "git+https://github.com/DCC-Lab/PyHardwareLibrary@master"   # provides USBPort.readStream (PR #120, released in hardwarelibrary 2.2.0)
     # macOS with a non-standard brew prefix:
     export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
 
