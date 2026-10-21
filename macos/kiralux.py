@@ -19,6 +19,7 @@ https://github.com/DCC-Lab/PyHardwareLibrary/pull/120. The high-level API
 """
 from __future__ import annotations
 
+from enum import Enum
 from functools import cached_property
 from typing import Optional
 
@@ -36,6 +37,42 @@ COMMAND_SIZE = 1024
 HEADER_SIZE = 16384
 BLOCK_SIZE = 16384
 BLOCK_MAIN = BLOCK_SIZE - 1
+
+
+class Command(str, Enum):
+    """The camera's command vocabulary — the single source of truth, mirroring
+    what the camera reports through ``discover``.
+
+    Members are ``str`` so they can be used directly; ``Kiralux.command`` also
+    accepts a plain string. ``Kiralux.validate_vocabulary()`` checks this enum
+    against the live ``discover`` list at open time to catch firmware drift.
+    """
+    # protocol / meta
+    DISCOVER = "discover"; ERROR = "error"; ECHO = "echo"; PING = "ping"
+    ID = "id"; INFO = "info"; VER = "ver"; MODEL = "model"; NAME = "name"
+    SERNUM = "sernum"; UNLOCK = "unlock"; STATE = "state"; TAGS = "tags"
+    NVSTOR = "nvstor"; CAMERA_RADIX = "camera_radix"; DEBUG_RADIX = "debug_radix"
+    # acquisition
+    STOP = "stop"; START = "start"; ARM = "arm"; DISARM = "disarm"
+    HWTRIG = "hwtrig"; NFRAMES = "nframes"; SFR = "sfr"; GPO = "gpo"
+    # exposure / gain / level
+    EXP = "exp"; GAIN = "gain"; BLKLVL = "blklvl"
+    # geometry
+    ROI = "roi"; HBIN = "hbin"; VBIN = "vbin"; VFLIP = "vflip"; HFLIP = "hflip"
+    IMAGE_DIMS = "image_dims"; IMAGE_WIDTH = "image_width"; IMAGE_HEIGHT = "image_height"
+    # pixel / sensor
+    PIXEL_BIT_DEPTH = "pixel_bit_depth"; PIXEL_SIZE = "pixel_size"
+    PIXEL_WIDTH_NM = "pixel_width_nm"; PIXEL_HEIGHT_NM = "pixel_height_nm"
+    PIXEL_BYTE_ORDERING = "pixel_byte_ordering"; PIXEL_CLOCK_COUNT_BASE = "pixel_clock_count_base"
+    SENSOR_READOUT_TIME = "sensor_readout_time"; FRAMETIME = "frametime"; TIME = "time"
+    IMGPACK = "imgpack"; HOT_PIXEL_CORRECTION = "hot_pixel_correction"
+    STATUSLED = "statusled"; TEMPERATURE = "temperature"
+    # polarization
+    POLAR_PHASE = "polar_phase"
+    # color (not applicable on the mono polarization model, but reported)
+    COLOR = "color"; COLOR_FILTER_PHASE = "color_filter_phase"; IR_FILTER_TYPE = "ir_filter_type"
+    COLOR_CORRECTION_MATRIX = "color_correction_matrix"; OUTPUT_COLOR_SPACE = "output_color_space"
+    DEFAULT_WHITE_BALANCE_MATRIX = "default_white_balance_matrix"
 
 
 class KiraluxError(RuntimeError):
@@ -161,9 +198,10 @@ class Kiralux:
         self.commandEndPoint = self.port.endPointForAddress(EP_COMMAND)
         self.responseEndPoint = self.port.endPointForAddress(EP_RESPONSE)
         self.imageEndPoint = self.port.endPointForAddress(EP_IMAGE)
-        self.command("stop")
-        self.serial = self.command("sernum")
-        self.model = self.command("model")
+        self.command(Command.STOP)
+        self.serial = self.command(Command.SERNUM)
+        self.model = self.command(Command.MODEL)
+        self.validate_vocabulary()
 
     @staticmethod
     def available() -> list[str]:
@@ -189,8 +227,16 @@ class Kiralux:
         return f"<Kiralux {self.model} sn={self.serial}>"
 
     # -- protocol ----------------------------------------------------------- #
-    def command(self, text: str) -> str:
-        """Send an ASCII command and return the camera's response."""
+    def command(self, name, *args) -> str:
+        """Send a command (a :class:`Command` or plain string) with optional
+        arguments, and return the camera's text response.
+
+        Raises :class:`KiraluxError` on an ``error ...`` reply. With no argument
+        most commands report their current value (``command(Command.EXP)``).
+        """
+        text = name.value if isinstance(name, Command) else str(name)
+        if args:
+            text = text + " " + " ".join(str(a) for a in args)
         self.port.writeData((text.encode() + b"\x00").ljust(COMMAND_SIZE, b"\x00"),
                             endPoint=self.commandEndPoint)
         reply = bytes(self.port.readData(COMMAND_SIZE, endPoint=self.responseEndPoint))
@@ -199,78 +245,95 @@ class Kiralux:
             raise KiraluxError(f"{text!r} -> {reply}")
         return reply
 
-    def describe(self, command: str) -> str:
-        return self.command(f"{command}.disc")
+    def describe(self, command) -> str:
+        """Return the camera's self-documentation (JSON) for a command."""
+        name = command.value if isinstance(command, Command) else str(command)
+        return self.command(name + ".disc")
+
+    def validate_vocabulary(self):
+        """Warn if the camera's live ``discover`` list differs from :class:`Command`.
+
+        Surfaces firmware drift (a command we name that the camera no longer has,
+        or one the camera gained that we don't know) without blocking use.
+        """
+        import warnings
+        reported = set(self.command(Command.DISCOVER).split())
+        known = {c.value for c in Command}
+        unknown, missing = reported - known, known - reported
+        if unknown or missing:
+            warnings.warn(
+                f"Kiralux command-set drift vs firmware: unknown to driver="
+                f"{sorted(unknown)}, not reported by camera={sorted(missing)}",
+                stacklevel=2)
 
     # -- identity ----------------------------------------------------------- #
     @property
     def sensor_size(self) -> tuple[int, int]:
-        return int(self.command("image_width")), int(self.command("image_height"))
+        return int(self.command(Command.IMAGE_WIDTH)), int(self.command(Command.IMAGE_HEIGHT))
 
     @property
     def bit_depth(self) -> int:
-        return int(self.command("pixel_bit_depth"))
+        return int(self.command(Command.PIXEL_BIT_DEPTH))
 
     @property
     def temperature(self) -> float:
-        return float(self.command("temperature"))
+        return float(self.command(Command.TEMPERATURE))
 
     # -- settings ----------------------------------------------------------- #
     @property
     def exposure_us(self) -> int:
-        return int(self.command("exp"))
+        return int(self.command(Command.EXP))
 
     @exposure_us.setter
     def exposure_us(self, microseconds: int):
-        self.command(f"exp {int(microseconds)}")
+        self.command(Command.EXP, int(microseconds))
 
     @property
     def gain_db(self) -> int:
-        return int(self.command("gain"))
+        return int(self.command(Command.GAIN))
 
     @gain_db.setter
     def gain_db(self, value: int):
-        self.command(f"gain {int(value)}")
+        self.command(Command.GAIN, int(value))
 
     @property
     def roi(self) -> tuple[int, int, int, int]:
-        return tuple(int(x) for x in self.command("roi").split())
+        return tuple(int(x) for x in self.command(Command.ROI).split())
 
     @roi.setter
     def roi(self, box: tuple[int, int, int, int]):
-        left, top, right, bottom = box
-        self.command(f"roi {left} {top} {right} {bottom}")
+        self.command(Command.ROI, *box)
 
     @property
     def binning(self) -> tuple[int, int]:
-        return int(self.command("hbin")), int(self.command("vbin"))
+        return int(self.command(Command.HBIN)), int(self.command(Command.VBIN))
 
     @binning.setter
     def binning(self, hv: tuple[int, int]):
         h, v = hv
-        self.command(f"hbin {int(h)}")
-        self.command(f"vbin {int(v)}")
+        self.command(Command.HBIN, int(h))
+        self.command(Command.VBIN, int(v))
 
     def reset_roi(self):
-        self.command("stop")
-        self.command("hbin 1")
-        self.command("vbin 1")
-        self.command("roi 0 0 2447 2047")
+        self.command(Command.STOP)
+        self.command(Command.HBIN, 1)
+        self.command(Command.VBIN, 1)
+        self.command(Command.ROI, 0, 0, 2447, 2047)
 
     # -- acquisition -------------------------------------------------------- #
     def snap(self, exposure_us: Optional[int] = None, *, timeout: float = 3.0) -> PolarFrame:
         """Acquire one software-triggered frame and return it as a PolarFrame."""
         if exposure_us is not None:
             self.exposure_us = exposure_us
-        self.command("stop")
-        self.command("hwtrig none")
-        self.command("nframes 1")
+        self.command(Command.STOP)
+        self.command(Command.HWTRIG, "none")
+        self.command(Command.NFRAMES, 1)
         width, height = self.sensor_size
-        self.command("arm")
-        self.command("start")
+        self.command(Command.ARM)
+        self.command(Command.START)
         raw = self.port.readStream(HEADER_SIZE + width * height * 3 // 2,
                                    endPoint=self.imageEndPoint, timeout=int(timeout * 1000))
-        self.command("stop")
+        self.command(Command.STOP)
         return PolarFrame(unpack_mosaic(bytes(raw), width, height))
 
 
