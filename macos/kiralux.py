@@ -1,66 +1,41 @@
-"""Pure-Python driver for the ThorLabs Kiralux CS505MUP1 polarization camera.
+"""Pure-Python driver for the ThorLabs Kiralux CS505MUP1 polarization camera,
+built on PyHardwareLibrary's ``USBPort`` (pyusb) instead of a private usb1 transport.
 
-No ThorLabs software required — talks the camera's native USB protocol directly
-through libusb. Reverse-engineered; see HANDOFF.md / docs/PROTOCOL.md.
+This is the "option B" variant: the camera's command dialog goes through
+``USBPort.writeData``/``readData`` and the image through ``USBPort.readStream`` — the
+high-throughput bulk read added in
+https://github.com/DCC-Lab/PyHardwareLibrary/pull/120. The high-level API
+(``snap`` -> ``PolarFrame`` with ``.s0``/``.dolp``/``.aolp``) is unchanged.
+
+    pip install "git+https://github.com/DCC-Lab/PyHardwareLibrary@master"   # once PR #120 is merged
+    # macOS with a non-standard brew prefix:
+    export DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib
 
     from kiralux import Kiralux
-
     with Kiralux() as cam:
         cam.exposure_us = 20_000
-        frame = cam.snap()              # -> PolarFrame (2048 x 2448 uint16 mosaic)
-        intensity = frame.s0            # demosaiced Stokes views, computed lazily
-        dolp      = frame.dolp          # degree of linear polarization  (0..1)
-        angle     = frame.aolp          # angle of linear polarization   (-90..90 deg)
+        frame = cam.snap()
+        dolp = frame.dolp
 """
 from __future__ import annotations
 
-import time
 from functools import cached_property
 from typing import Optional
 
 import numpy as np
 
-
-# --------------------------------------------------------------------------- #
-#  libusb backend: make `import usb1` work even with a non-standard libusb.
-# --------------------------------------------------------------------------- #
-def locate_libusb() -> None:
-    """Load libusb from common locations if the default search fails."""
-    import ctypes.util
-    import glob
-    import os
-    import sys
-
-    if ctypes.util.find_library("usb-1.0"):
-        return
-    if sys.platform == "darwin":
-        roots = ("/opt/homebrew", "/usr/local", os.path.expanduser("~/.local/homebrew"))
-        patterns = [os.path.join(r, "lib", "libusb-1.0*.dylib") for r in roots]
-    else:
-        patterns = ["/usr/lib*/libusb-1.0.so*", "/lib*/libusb-1.0.so*"]
-    for pattern in patterns:
-        for path in sorted(glob.glob(pattern)):
-            try:
-                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
-                return
-            except OSError:
-                pass
-
-
-locate_libusb()
-import usb1  # noqa: E402
+from hardwarelibrary.communication.usbport import USBPort
 
 
 # --------------------------------------------------------------------------- #
 #  Protocol / transport constants
 # --------------------------------------------------------------------------- #
 VID, PID = 0x1313, 0x4001
-EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83   # bulk endpoints
-COMMAND_SIZE = 1024                    # fixed command buffer length
-HEADER_SIZE = 16384                    # frame header, precedes the pixels
-BLOCK_SIZE = 16384                     # 12-bit triplets never cross a block
-BLOCK_MAIN = BLOCK_SIZE - 1            # 16383 "main" bytes (+1 tail byte) per block
-READS, READ_SIZE = 256, BLOCK_SIZE     # async reads of one burst each -> ~95 MB/s
+EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83
+COMMAND_SIZE = 1024
+HEADER_SIZE = 16384
+BLOCK_SIZE = 16384
+BLOCK_MAIN = BLOCK_SIZE - 1
 
 
 class KiraluxError(RuntimeError):
@@ -68,7 +43,7 @@ class KiraluxError(RuntimeError):
 
 
 # --------------------------------------------------------------------------- #
-#  Standalone helpers
+#  Standalone helpers (identical to the usb1 driver)
 # --------------------------------------------------------------------------- #
 def unpack_mosaic(data: bytes, width: int, height: int) -> np.ndarray:
     """Unpack a 12-bit Mono12p frame into a (height, width) uint16 mosaic.
@@ -113,33 +88,13 @@ def hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     return (np.clip(np.stack([r + m, g + m, b + m], axis=-1), 0, 1) * 255).astype(np.uint8)
 
 
-def open_device(context: "usb1.USBContext", serial: Optional[str] = None):
-    """Open the Kiralux USB handle (first one, or the one matching `serial`)."""
-    for device in context.getDeviceList(skip_on_error=True):
-        if device.getVendorID() != VID or device.getProductID() != PID:
-            continue
-        if serial is None:
-            return device.open()
-        try:
-            if device.getSerialNumber().strip("\x00 ") == serial:
-                return device.open()
-        except usb1.USBError:
-            pass
-    raise KiraluxError(
-        "No Kiralux camera found"
-        + (f" with serial {serial!r}" if serial else "")
-        + " (connected? detached from any VM?)"
-    )
-
-
 # --------------------------------------------------------------------------- #
-#  Polarization frame
+#  Polarization frame (identical to the usb1 driver)
 # --------------------------------------------------------------------------- #
 class PolarFrame:
     """A raw 2x2 polarization mosaic with lazily-computed polarimetric views.
 
     Sony IMX250MZR super-pixel layout (top-left origin):  [ 90  45 / 135  0 ].
-    Stokes/DoLP/AoLP are half-resolution (one value per 2x2 super-pixel).
     """
 
     def __init__(self, mosaic: np.ndarray):
@@ -161,8 +116,7 @@ class PolarFrame:
         """The four analyser images (I0, I45, I90, I135), half-resolution."""
         m = self.mosaic
         m = m[: m.shape[0] & ~1, : m.shape[1] & ~1].astype(np.float32)
-        return (m[1::2, 1::2], m[0::2, 1::2],    # I0,  I45
-                m[0::2, 0::2], m[1::2, 0::2])     # I90, I135
+        return (m[1::2, 1::2], m[0::2, 1::2], m[0::2, 0::2], m[1::2, 0::2])
 
     @cached_property
     def stokes(self):
@@ -172,24 +126,20 @@ class PolarFrame:
 
     @property
     def s0(self):
-        """Total intensity image."""
         return self.stokes[0]
 
     @property
     def dolp(self):
-        """Degree of linear polarization, 0..1."""
         s0, s1, s2 = self.stokes
         return np.hypot(s1, s2) / np.maximum(s0, 1e-6)
 
     @property
     def aolp(self):
-        """Angle of linear polarization, in degrees (-90..90)."""
         s0, s1, s2 = self.stokes
         return np.degrees(0.5 * np.arctan2(s2, s1))
 
     @property
     def falsecolor(self) -> np.ndarray:
-        """HSV composite (hue=AoLP, saturation=DoLP, value=S0) as RGB uint8."""
         s0, s1, s2 = self.stokes
         dolp = np.clip(np.hypot(s1, s2) / np.maximum(s0, 1e-6), 0, 1)
         hue = (0.5 * np.arctan2(s2, s1) + np.pi / 2) / np.pi
@@ -199,53 +149,35 @@ class PolarFrame:
 
 
 # --------------------------------------------------------------------------- #
-#  Camera
+#  Camera (transport = USBPort)
 # --------------------------------------------------------------------------- #
 class Kiralux:
-    """A ThorLabs Kiralux CS505MUP1 polarization camera.
-
-    Open the first camera (or one by serial), set acquisition parameters through
-    plain attributes, and read frames with :meth:`snap`.
-    """
+    """A ThorLabs Kiralux CS505MUP1, driven through PyHardwareLibrary's USBPort."""
 
     def __init__(self, serial: Optional[str] = None):
-        self.context = usb1.USBContext()
-        self.context.open()
-        self.device = open_device(self.context, serial)
-        try:
-            self.device.setAutoDetachKernelDriver(True)
-        except usb1.USBError:
-            pass
-        try:
-            if self.device.kernelDriverActive(0):
-                self.device.detachKernelDriver(0)
-        except usb1.USBError:
-            pass
-        self.device.claimInterface(0)
+        self.port = USBPort(idVendor=VID, idProduct=PID, serialNumber=serial, interfaceNumber=0)
+        self.port.open()
+        self.port.defaultTimeout = 3000
+        self.commandEndPoint = self.port.endPointForAddress(EP_COMMAND)
+        self.responseEndPoint = self.port.endPointForAddress(EP_RESPONSE)
+        self.imageEndPoint = self.port.endPointForAddress(EP_IMAGE)
         self.command("stop")
         self.serial = self.command("sernum")
         self.model = self.command("model")
 
-    # -- discovery / lifecycle --------------------------------------------- #
     @staticmethod
     def available() -> list[str]:
-        """Serial numbers (USB iSerial) of all connected Kiralux cameras."""
-        with usb1.USBContext() as context:
-            found = []
-            for device in context.getDeviceList(skip_on_error=True):
-                if device.getVendorID() == VID and device.getProductID() == PID:
-                    try:
-                        found.append(device.getSerialNumber().strip("\x00 "))
-                    except usb1.USBError:
-                        found.append(None)
-            return found
+        import usb.core
+        out = []
+        for d in usb.core.find(find_all=True, idVendor=VID, idProduct=PID):
+            try:
+                out.append(d.serial_number.strip("\x00 "))
+            except Exception:
+                out.append(None)
+        return out
 
     def close(self):
-        try:
-            self.device.releaseInterface(0)
-        except usb1.USBError:
-            pass
-        self.context.close()
+        self.port.close()
 
     def __enter__(self):
         return self
@@ -257,27 +189,22 @@ class Kiralux:
         return f"<Kiralux {self.model} sn={self.serial}>"
 
     # -- protocol ----------------------------------------------------------- #
-    def command(self, text: str, timeout: int = 3000) -> str:
-        """Send an ASCII command and return the camera's response.
-
-        Raises :class:`KiraluxError` on an ``error ...`` reply. With no argument
-        most commands return their current value (e.g. ``command("exp")``).
-        """
-        self.device.bulkWrite(EP_COMMAND, (text.encode() + b"\x00").ljust(COMMAND_SIZE, b"\x00"), timeout)
-        reply = bytes(self.device.bulkRead(EP_RESPONSE, COMMAND_SIZE, timeout)).split(b"\x00")[0]
-        reply = reply.decode("latin1").strip()
+    def command(self, text: str) -> str:
+        """Send an ASCII command and return the camera's response."""
+        self.port.writeData((text.encode() + b"\x00").ljust(COMMAND_SIZE, b"\x00"),
+                            endPoint=self.commandEndPoint)
+        reply = bytes(self.port.readData(COMMAND_SIZE, endPoint=self.responseEndPoint))
+        reply = reply.split(b"\x00")[0].decode("latin1").strip()
         if reply.startswith("error"):
             raise KiraluxError(f"{text!r} -> {reply}")
         return reply
 
     def describe(self, command: str) -> str:
-        """Return the camera's self-documentation (JSON) for a command."""
         return self.command(f"{command}.disc")
 
-    # -- identity (read-only) ---------------------------------------------- #
+    # -- identity ----------------------------------------------------------- #
     @property
     def sensor_size(self) -> tuple[int, int]:
-        """(width, height) in pixels for the current ROI/binning."""
         return int(self.command("image_width")), int(self.command("image_height"))
 
     @property
@@ -286,10 +213,9 @@ class Kiralux:
 
     @property
     def temperature(self) -> float:
-        """Sensor temperature in degrees Celsius."""
         return float(self.command("temperature"))
 
-    # -- acquisition settings (read/write) --------------------------------- #
+    # -- settings ----------------------------------------------------------- #
     @property
     def exposure_us(self) -> int:
         return int(self.command("exp"))
@@ -307,16 +233,7 @@ class Kiralux:
         self.command(f"gain {int(value)}")
 
     @property
-    def black_level(self) -> int:
-        return int(self.command("blklvl"))
-
-    @black_level.setter
-    def black_level(self, value: int):
-        self.command(f"blklvl {int(value)}")
-
-    @property
     def roi(self) -> tuple[int, int, int, int]:
-        """Region of interest as (left, top, right, bottom)."""
         return tuple(int(x) for x in self.command("roi").split())
 
     @roi.setter
@@ -335,13 +252,12 @@ class Kiralux:
         self.command(f"vbin {int(v)}")
 
     def reset_roi(self):
-        """Restore the full sensor (2448 x 2048) and 1x1 binning."""
         self.command("stop")
         self.command("hbin 1")
         self.command("vbin 1")
         self.command("roi 0 0 2447 2047")
 
-    # -- frame acquisition -------------------------------------------------- #
+    # -- acquisition -------------------------------------------------------- #
     def snap(self, exposure_us: Optional[int] = None, *, timeout: float = 3.0) -> PolarFrame:
         """Acquire one software-triggered frame and return it as a PolarFrame."""
         if exposure_us is not None:
@@ -350,47 +266,19 @@ class Kiralux:
         self.command("hwtrig none")
         self.command("nframes 1")
         width, height = self.sensor_size
-        raw = self.acquire(HEADER_SIZE + width * height * 3 // 2, timeout)
-        return PolarFrame(unpack_mosaic(raw, width, height))
-
-    def acquire(self, nbytes: int, timeout: float = 3.0) -> bytes:
-        """Arm, software-trigger, and read `nbytes` from the image endpoint.
-
-        Reads with many concurrent 16 KB transfers (one SuperSpeed burst each),
-        which is what keeps the camera from overrunning (~95 MB/s).
-        """
-        buffer = bytearray()
-        state = {"live": READS, "stop": False}
-
-        def on_complete(transfer):
-            if transfer.getStatus() == usb1.TRANSFER_COMPLETED:
-                buffer.extend(transfer.getBuffer()[: transfer.getActualLength()])
-            if not state["stop"] and len(buffer) < nbytes:
-                try:
-                    transfer.submit()
-                    return
-                except usb1.USBError:
-                    pass
-            state["live"] -= 1
-
-        transfers = [self.device.getTransfer() for _ in range(READS)]
-        for transfer in transfers:
-            transfer.setBulk(EP_IMAGE, READ_SIZE, callback=on_complete, timeout=2000)
         self.command("arm")
-        for transfer in transfers:
-            transfer.submit()
-        start = time.monotonic()
         self.command("start")
-        while state["live"] and len(buffer) < nbytes and time.monotonic() - start < timeout:
-            self.context.handleEventsTimeout(0.005)
-        state["stop"] = True
-        for transfer in transfers:
-            try:
-                transfer.cancel()
-            except usb1.USBError:
-                pass
-        drain = time.monotonic()
-        while state["live"] and time.monotonic() - drain < 0.15:
-            self.context.handleEventsTimeout(0.005)
+        raw = self.port.readStream(HEADER_SIZE + width * height * 3 // 2,
+                                   endPoint=self.imageEndPoint, timeout=int(timeout * 1000))
         self.command("stop")
-        return bytes(buffer)
+        return PolarFrame(unpack_mosaic(bytes(raw), width, height))
+
+
+if __name__ == "__main__":
+    with Kiralux() as cam:
+        print(cam, "| T =", cam.temperature, "C | available:", Kiralux.available())
+        cam.exposure_us = 20_000
+        frame = cam.snap()
+        m = np.asarray(frame).astype(int)
+        print("frame", repr(frame), "vmed", float(np.median(np.abs(m[1:] - m[:-1]))),
+              "dolp %.3f" % float(frame.dolp.mean()))
