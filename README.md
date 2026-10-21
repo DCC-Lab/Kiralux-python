@@ -57,6 +57,16 @@ Kiralux.available()                     # numéros de série des caméras branch
 ```
 Les vues polarimétriques sont calculées **paresseusement** et mises en cache.
 
+### Intégration PyHardwareLibrary (optionnelle)
+`macos/kiralux_phl.py` adapte le driver à l'écosystème [DCC-Lab/PyHardwareLibrary](https://github.com/DCC-Lab/PyHardwareLibrary) :
+`KiraluxCamera(CameraDevice, ExposureCapability, GainCapability)` — machine à états,
+cycle de vie, notifications, boucle de capture et introspection des *capabilities*,
+par **composition** d'un `Kiralux` (l'USB n'est pas réécrit). Dépendance optionnelle :
+```bash
+pip install "git+https://github.com/DCC-Lab/PyHardwareLibrary@master"
+python macos/kiralux_phl.py
+```
+
 ## Le protocole en bref
 
 Interface USB vendor (classe 0xFF), 5 endpoints bulk. Protocole **texte ASCII**,
