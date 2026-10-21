@@ -4,7 +4,7 @@ from PIL import Image
 W, H = 2448, 2048
 npix = W * H
 data = open("raw_frame.bin", "rb").read()
-OFF = 60  # pixels juste apres le tag ENDT
+OFF = 60  # pixels just after the ENDT tag
 need = npix * 3 // 2
 raw = np.frombuffer(data[OFF:OFF + need], dtype=np.uint8).astype(np.uint16)
 b = raw.reshape(-1, 3)
@@ -24,6 +24,6 @@ for s in ("A", "B"):
         p[1::2] = ((b[:, 1] & 0x0F) << 8) | b[:, 2]
     img = p.reshape(H, W)
     save(img, f"off60_{s}.png")
-    # bruit haute-frequence horizontal (plus faible = bon unpack)
+    # horizontal high-frequency noise (lower = good unpack)
     hf = np.mean(np.abs(np.diff(img[1000, :].astype(int))))
-    print(f"schema {s}: mean={img.mean():.1f} min={img.min()} max={img.max()} hf_noise={hf:.1f}")
+    print(f"scheme {s}: mean={img.mean():.1f} min={img.min()} max={img.max()} hf_noise={hf:.1f}")

@@ -12,9 +12,9 @@ def cmd(s,to=3000):
     return bytes(h.bulkRead(EPI,1024,to)).split(b"\x00")[0].decode("latin1").strip()
 
 cmd("stop"); cmd("roi 0 0 2447 2047")
-print("sfr avant:", cmd("sfr"))
+print("sfr before:", cmd("sfr"))
 print("sfr on ->", cmd("sfr on"))
-print("sfr 100 ->", cmd("sfr 100"))      # frame rate mini = readout le plus lent
+print("sfr 100 ->", cmd("sfr 100"))      # min frame rate = slowest readout
 print("sfr now ->", cmd("sfr"))
 W=int(cmd("image_width"));H=int(cmd("image_height"))
 cmd("exp 20000");cmd("hwtrig none");cmd("nframes 1")
@@ -45,13 +45,13 @@ while st["a"]>0 and time.monotonic()-t1<1: ctx.handleEventsTimeout(0.02)
 try:cmd("stop")
 except Exception:pass
 h.releaseInterface(0);ctx.close()
-print(f"recu {len(data)}/{target} ({100*len(data)/target:.1f}%) en {dt*1000:.0f}ms  debit={len(data)/dt/1e6:.1f}MB/s")
+print(f"received {len(data)}/{target} ({100*len(data)/target:.1f}%) in {dt*1000:.0f}ms  throughput={len(data)/dt/1e6:.1f}MB/s")
 row=W*3//2; nrows=min(H,(len(data)-HDR)//row)
 raw=np.frombuffer(bytes(data[HDR:HDR+nrows*row]),np.uint8).astype(np.uint16).reshape(-1,3)
 p=np.empty(nrows*W,np.uint16)
 p[0::2]=raw[:,0]|((raw[:,1]&0x0F)<<8);p[1::2]=(raw[:,1]>>4)|(raw[:,2]<<4)
 img=p.reshape(nrows,W)
-print(f"{nrows} lignes vmed={np.median(np.abs(img[1:].astype(int)-img[:-1])):.1f} hmed={np.median(np.abs(img[:,1:].astype(int)-img[:,:-1])):.1f}")
+print(f"{nrows} lines vmed={np.median(np.abs(img[1:].astype(int)-img[:-1])):.1f} hmed={np.median(np.abs(img[:,1:].astype(int)-img[:,:-1])):.1f}")
 a=img.astype(np.float32);lo,hi=np.percentile(a,[1,99])
 d=np.clip((a-lo)/max(hi-lo,1)*255,0,255).astype(np.uint8)
 Image.fromarray(d,"L").resize((1300,int(1300*nrows/W)),Image.LANCZOS).save("slow.png")

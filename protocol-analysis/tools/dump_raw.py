@@ -17,11 +17,11 @@ c.cmd("stop"); c.close()
 
 open("raw_frame.bin", "wb").write(data)
 print(f"total={len(data)}  W={W} H={H}  W*H={W*H}  packed12={int(W*H*1.5)}")
-# apercu en-tete
+# header preview
 hdr = bytes(data[:128])
 print("header hex :", hdr.hex())
 print("header ascii:", "".join(chr(b) if 32 <= b < 127 else "." for b in hdr))
-# cherche d'eventuels marqueurs ASCII dans les 2048 premiers octets
+# look for any ASCII markers in the first 2048 bytes
 blk = bytes(data[:2048])
 import re
 for m in re.finditer(rb"[A-Za-z]{3,}", blk):

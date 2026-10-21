@@ -9,18 +9,18 @@ p[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
 p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
 img = p.reshape(H, W).astype(np.int32)
 
-# rugosite intra-ligne (mediane |dx|) par ligne
+# intra-line roughness (median |dx|) per line
 rough = np.median(np.abs(img[:, 1:] - img[:, :-1]), axis=1)
-print("rugosite par ligne 495..525:")
+print("roughness per line 495..525:")
 for r in range(495, 526):
     bar = "#" * int(rough[r] / 40)
     print(f"  row {r:4d}: {rough[r]:6.0f} {bar}")
 
-# combien de lignes 'folles' (rough > 600) et leur espacement
+# how many 'wild' lines (rough > 600) and their spacing
 wild = np.where(rough > 600)[0]
-print(f"\nlignes folles (rough>600): {len(wild)} / {H}")
+print(f"\nwild lines (rough>600): {len(wild)} / {H}")
 if len(wild) > 1:
     diffs = np.diff(wild)
     vals, cnts = np.unique(diffs, return_counts=True)
-    print("espacements les plus frequents:", sorted(zip(cnts, vals), reverse=True)[:6])
-print("premieres lignes folles:", wild[:20].tolist())
+    print("most frequent spacings:", sorted(zip(cnts, vals), reverse=True)[:6])
+print("first wild lines:", wild[:20].tolist())

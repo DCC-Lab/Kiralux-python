@@ -1,5 +1,5 @@
-"""Extrait et decode le descripteur de configuration USB depuis la capture
-(reponse au GET_DESCRIPTOR config), pour connaitre interface + endpoints exacts.
+"""Extracts and decodes the USB configuration descriptor from the capture
+(response to the GET_DESCRIPTOR config), to know the exact interface + endpoints.
 """
 import struct, sys
 
@@ -15,14 +15,14 @@ def main(path):
         headerLen = struct.unpack_from("<H", p, 0)[0]
         transfer = p[22]; dataLength = struct.unpack_from("<I", p, 23)[0]
         payload = p[headerLen:headerLen+dataLength]
-        # Un descripteur de config commence par bLength=9, bDescriptorType=2
+        # A config descriptor starts with bLength=9, bDescriptorType=2
         if transfer == 2 and len(payload) >= 9 and payload[1] == 2 and payload[0] == 9:
             total = struct.unpack_from("<H", payload, 2)[0]
             if len(payload) >= total and total > 9:
                 cfg = payload[:total]; break
     if not cfg:
-        print("descripteur de config non trouve dans la capture"); return
-    print(f"# config descriptor {len(cfg)} octets: {cfg.hex()}")
+        print("config descriptor not found in the capture"); return
+    print(f"# config descriptor {len(cfg)} bytes: {cfg.hex()}")
     i = 0
     while i < len(cfg):
         blen = cfg[i]; btype = cfg[i+1]

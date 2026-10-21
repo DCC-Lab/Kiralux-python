@@ -12,7 +12,7 @@ p[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
 p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
 img = p.reshape(H, W).astype(np.float32)
 
-# Intensite S0 : moyenne du super-pixel 2x2 polar -> 1224x1024, supprime la mosaique
+# S0 intensity: mean of the 2x2 polar super-pixel -> 1224x1024, removes the mosaic
 s0 = (img[0::2, 0::2] + img[0::2, 1::2] + img[1::2, 0::2] + img[1::2, 1::2]) / 4.0
 
 def save(a, name, thumb=760):
@@ -22,5 +22,5 @@ def save(a, name, thumb=760):
 
 save(s0, "S0_off60.png")
 print("S0", s0.shape, "mean=%.1f" % s0.mean())
-# residu de striping sur S0
+# striping residual on S0
 print("striping S0 (even/odd rows):", float(np.mean(np.abs(s0[0::2].mean(0) - s0[1::2].mean(0)))))

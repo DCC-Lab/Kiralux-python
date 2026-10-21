@@ -12,6 +12,6 @@ img = p.reshape(H, W).astype(np.float32)
 lo, hi = np.percentile(img, [1, 99])
 d = np.clip((img - lo) / (hi - lo) * 255, 0, 255).astype(np.uint8)
 im = Image.fromarray(d, "L")
-im = im.resize((1600, int(1600*H/W)), Image.LANCZOS)  # reduction douce
+im = im.resize((1600, int(1600*H/W)), Image.LANCZOS)  # gentle reduction
 im.save("full_raw_1600.png")
 print("saved", im.size)

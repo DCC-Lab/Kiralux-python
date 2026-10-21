@@ -51,7 +51,7 @@ try: cmd("stop")
 except Exception: pass
 h.releaseInterface(0); ctx.close()
 
-print(f"recu {len(data)}/{target}  ({100*len(data)/target:.1f}%)")
+print(f"received {len(data)}/{target}  ({100*len(data)/target:.1f}%)")
 nrows = min(H, (len(data)-HDR)//row)
 raw = np.frombuffer(bytes(data[HDR:HDR+nrows*row]), np.uint8).astype(np.uint16).reshape(-1,3)
 p = np.empty(nrows*W, np.uint16)
@@ -59,7 +59,7 @@ p[0::2] = raw[:,0] | ((raw[:,1]&0x0F)<<8); p[1::2] = (raw[:,1]>>4) | (raw[:,2]<<
 img = p.reshape(nrows, W)
 vmed = float(np.median(np.abs(img[1:].astype(int)-img[:-1])))
 hmed = float(np.median(np.abs(img[:,1:].astype(int)-img[:,:-1])))
-print(f"{nrows} lignes  vmed={vmed:.1f} hmed={hmed:.1f}  (propre si ~egaux et <20)")
+print(f"{nrows} lines  vmed={vmed:.1f} hmed={hmed:.1f}  (clean if ~equal and <20)")
 a=img.astype(np.float32); lo,hi=np.percentile(a,[1,99])
 d=np.clip((a-lo)/max(hi-lo,1)*255,0,255).astype(np.uint8)
 Image.fromarray(d,"L").resize((1300,int(1300*nrows/W)),Image.LANCZOS).save("async2.png")

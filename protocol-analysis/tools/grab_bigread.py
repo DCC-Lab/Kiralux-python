@@ -4,9 +4,9 @@ from camera_usb import ThorCam, EP_IMG_IN
 c = ThorCam(verbose=False)
 c.cmd("stop"); c.cmd("exp 20000"); c.cmd("hwtrig none"); c.cmd("nframes 1")
 W = int(c.cmd("image_width")); H = int(c.cmd("image_height"))
-expected = 16384 + W * H * 3 // 2   # header + 12-bit packe (hypothese)
+expected = 16384 + W * H * 3 // 2   # header + 12-bit packed (hypothesis)
 
-# gros buffer unique : libusb remplit en interne, pas de trou de boucle Python
+# single large buffer: libusb fills internally, no Python loop gap
 c.cmd("arm"); c.cmd("start")
 buf = usb.util.create_buffer(16 * 1024 * 1024)
 t0 = time.time()
@@ -19,5 +19,5 @@ c.cmd("stop"); c.close()
 
 data = bytes(buf[:n])
 open("raw_big.bin", "wb").write(data)
-print(f"lu {n} octets en {dt*1000:.0f} ms  (attendu ~{expected})  debit={n/dt/1e6:.1f} MB/s")
+print(f"read {n} bytes in {dt*1000:.0f} ms  (expected ~{expected})  throughput={n/dt/1e6:.1f} MB/s")
 print("header:", data[:16].hex())

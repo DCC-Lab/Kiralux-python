@@ -5,7 +5,7 @@ from camera_usb import ThorCam, EP_IMG_IN
 
 c = ThorCam(verbose=False)
 c.cmd("stop")
-# ROI valide 1024x1024 : left top right bottom
+# valid ROI 1024x1024: left top right bottom
 print("roi ->", c.cmd("roi 712 512 1735 1535"))
 W = int(c.cmd("image_width")); H = int(c.cmd("image_height"))
 print("dims:", W, H, " pixels_bytes=", W*H*3//2)
@@ -17,12 +17,12 @@ n = c.dev.read(EP_IMG_IN, buf, timeout=4000)
 dt = time.time() - t0
 c.cmd("stop"); c.close()
 data = bytes(buf[:n])
-print(f"lu {n} en {dt*1000:.0f}ms  (header60+pix={60+W*H*3//2})  debit={n/dt/1e6:.1f}MB/s")
+print(f"read {n} in {dt*1000:.0f}ms  (header60+pix={60+W*H*3//2})  throughput={n/dt/1e6:.1f}MB/s")
 
 for OFF in (60, 16384):
     need = W*H*3//2
     if len(data) < OFF+need:
-        print(f" off={OFF}: insuffisant ({len(data)})"); continue
+        print(f" off={OFF}: insufficient ({len(data)})"); continue
     raw = np.frombuffer(data[OFF:OFF+need], np.uint8).astype(np.uint16)
     b = raw.reshape(-1,3)
     p = np.empty(W*H, np.uint16)

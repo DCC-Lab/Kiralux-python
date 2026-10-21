@@ -1,4 +1,4 @@
-# Images de scène (exclues du depot)
+# Scene images (excluded from the repo)
 *.png
 *.jpg
 *.jpeg
@@ -8,7 +8,7 @@
 *.tiff
 frame_datauri.txt
 
-# Binaires volumineux, SAUF la capture brute de reference pour l'analyse offline
+# Large binaries, EXCEPT the raw reference capture for offline analysis
 *.bin
 !protocol-analysis/captures/raw_big.bin
 *.pcapng

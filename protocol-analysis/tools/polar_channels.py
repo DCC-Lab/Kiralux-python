@@ -15,13 +15,13 @@ def save(a, name, t=640):
     d = np.clip((a - lo) / max(hi-lo,1) * 255, 0, 255).astype(np.uint8)
     im = Image.fromarray(d, "L"); im.thumbnail((t, t)); im.save(name)
 
-# 4 canaux de polarisation (sous-echantillonnage 2x2)
+# 4 polarization channels (2x2 subsampling)
 c00 = img[0::2, 0::2]; c01 = img[0::2, 1::2]
 c10 = img[1::2, 0::2]; c11 = img[1::2, 1::2]
 save(c00, "ch00.png");
 s0 = (c00 + c01 + c10 + c11) / 4
 save(s0, "S0_final.png")
-# roughness de chaque canal
+# roughness of each channel
 for name, c in [("c00",c00),("c01",c01),("c10",c10),("c11",c11),("S0",s0)]:
     v = float(np.median(np.abs(c[1:]-c[:-1])))
     h = float(np.median(np.abs(c[:,1:]-c[:,:-1])))

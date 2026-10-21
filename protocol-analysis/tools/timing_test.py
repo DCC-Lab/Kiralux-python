@@ -12,7 +12,7 @@ target=HDR+W*H*3//2
 buf=usb1.USBTransferHelper  # placeholder (unused)
 cmd("arm")
 t0=time.monotonic(); cmd("start")
-# lecture SYNCHRONE simple en chunks de 1 Mo, log du debit dans le temps
+# simple SYNCHRONOUS read in chunks of 1 MB, log of throughput over time
 got=0; marks=[]
 CHUNK=1024*1024
 while got<target and time.monotonic()-t0<8:

@@ -23,10 +23,10 @@ def unpack(off, scheme):
         p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
     return p.reshape(H, W)
 
-# metrique : sur une bande lisse (lignes 950-970), bruit entre pixels SAME-POLAR (distance 2)
+# metric: on a smooth band (lines 950-970), noise between SAME-POLAR pixels (distance 2)
 def smoothness(img):
     band = img[950:970, 200:2200].astype(np.int32)
-    # difference horizontale a distance 2 (meme polariseur)
+    # horizontal difference at distance 2 (same polarizer)
     d2 = np.abs(band[:, 2::2] - band[:, 0:-2:2])
     return float(np.median(d2))
 

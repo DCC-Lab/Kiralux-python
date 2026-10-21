@@ -21,7 +21,7 @@ def vmed(img):
 
 best = None
 for stride in range(3668, 3689):
-    # frame_off doit garder la phase packing : multiple de 3 proche de 0/8
+    # frame_off must keep the packing phase: multiple of 3 close to 0/8
     for fo in (0, 60):
         img = unpackA_rows(fo, stride)
         if img is None: continue

@@ -16,7 +16,7 @@ for Wt in range(2420, 2480, 2):
     if nrows < 400:
         continue
     img = pix[:nrows * Wt].reshape(nrows, Wt)
-    # correlation verticale distance 2 (meme polariseur) sur zone centrale
+    # vertical correlation distance 2 (same polarizer) on central area
     c = img[200:nrows-200, 100:Wt-100]
     v = float(np.median(np.abs(c[2:] - c[:-2])))
     flag = ""

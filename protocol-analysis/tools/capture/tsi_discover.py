@@ -1,6 +1,6 @@
-"""Test direct du TSI SDK via ctypes (sans la pile .NET ThorImage).
-Charge thorlabs_tsi_camera_sdk.dll, ouvre le SDK, decouvre les cameras,
-et lit modele + taille capteur. Valide la voie Python officielle.
+"""Direct test of the TSI SDK via ctypes (without the .NET ThorImage stack).
+Loads thorlabs_tsi_camera_sdk.dll, opens the SDK, discovers the cameras,
+and reads model + sensor size. Validates the official Python path.
 """
 import ctypes as C
 import os
@@ -62,7 +62,7 @@ def main():
                 sdk.tl_camera_close_camera(handle)
     else:
         err = sdk.tl_camera_get_last_error()
-        print("  aucune camera detectee. last_error =",
+        print("  no camera detected. last_error =",
               err.decode(errors="replace") if err else None)
 
     sdk.tl_camera_close_sdk()

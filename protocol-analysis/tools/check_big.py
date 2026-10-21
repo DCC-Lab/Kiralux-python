@@ -15,9 +15,9 @@ for off in (60, 16384):
     img = unpackA(off)
     rough = np.median(np.abs(img[:, 1:] - img[:, :-1]), axis=1)
     wild = int((rough > 600).sum())
-    print(f"off={off}: lignes folles={wild}/{H}  rough median={np.median(rough):.0f}")
+    print(f"off={off}: wild lines={wild}/{H}  rough median={np.median(rough):.0f}")
 
-# genere l'image au meilleur offset
+# generate the image at the best offset
 best_off = 16384 if (np.median(np.abs(unpackA(16384)[:,1:]-unpackA(16384)[:,:-1]),axis=1)>600).sum() < \
                      (np.median(np.abs(unpackA(60)[:,1:]-unpackA(60)[:,:-1]),axis=1)>600).sum() else 60
 img = unpackA(best_off).astype(np.float32)

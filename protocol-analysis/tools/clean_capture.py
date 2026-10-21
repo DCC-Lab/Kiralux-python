@@ -12,7 +12,7 @@ def cmd(s,to=3000):
     return bytes(h.bulkRead(EPI,1024,to)).split(b"\x00")[0].decode("latin1").strip()
 
 cmd("stop"); cmd("sfr off")
-cmd("roi 712 512 1735 1535")          # 1024x1024 centre
+cmd("roi 712 512 1735 1535")          # 1024x1024 centered
 W=int(cmd("image_width"));H=int(cmd("image_height"))
 cmd("exp 20000");cmd("hwtrig none");cmd("nframes 1")
 pix=W*H*3//2; target=HDR+pix
@@ -44,14 +44,14 @@ raw=np.frombuffer(bytes(data[HDR:HDR+nrows*row]),np.uint8).astype(np.uint16).res
 p=np.empty(nrows*W,np.uint16)
 p[0::2]=raw[:,0]|((raw[:,1]&0x0F)<<8);p[1::2]=(raw[:,1]>>4)|(raw[:,2]<<4)
 img=p.reshape(nrows,W).astype(np.float32)
-print(f"{nrows}x{W}  recu {100*len(data)/target:.1f}%")
-# intensite S0 (demosaique polar 2x2) pour image naturelle
+print(f"{nrows}x{W}  received {100*len(data)/target:.1f}%")
+# S0 intensity (2x2 polar demosaic) for natural image
 s0=(img[0::2,0::2]+img[0::2,1::2]+img[1::2,0::2]+img[1::2,1::2])/4
 lo,hi=np.percentile(s0,[1,99])
 d=np.clip((s0-lo)/max(hi-lo,1)*255,0,255).astype(np.uint8)
 Image.fromarray(d,"L").save("clean_S0.png")
-# brut aussi
+# raw too
 lo,hi=np.percentile(img,[1,99])
 d2=np.clip((img-lo)/max(hi-lo,1)*255,0,255).astype(np.uint8)
 Image.fromarray(d2,"L").save("clean_raw.png")
-print("-> clean_S0.png (intensite), clean_raw.png (mosaique brute)")
+print("-> clean_S0.png (intensity), clean_raw.png (raw mosaic)")

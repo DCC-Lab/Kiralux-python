@@ -10,7 +10,7 @@ p[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
 p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
 img = p.reshape(H, W).astype(np.float32)
 
-# Pour chaque ligne, decalage entier [-30..30] maximisant la correlation avec la ligne-2 (meme polariseur)
+# For each line, integer shift [-30..30] maximizing the correlation with line-2 (same polarizer)
 shifts = [0, 0]
 col = slice(300, 2100)
 for i in range(2, H):
@@ -26,8 +26,8 @@ for i in range(2, H):
             best_c, best_s = c, s
     shifts.append(best_s)
 shifts = np.array(shifts)
-print("shifts: min=%d max=%d  premiers 20:" % (shifts.min(), shifts.max()), shifts[:20].tolist())
-print("cumul shift a la derniere ligne:", int(np.cumsum(shifts)[-1]))
-# histogramme des shifts
+print("shifts: min=%d max=%d  first 20:" % (shifts.min(), shifts.max()), shifts[:20].tolist())
+print("cumulative shift at the last line:", int(np.cumsum(shifts)[-1]))
+# histogram of the shifts
 vals, cnts = np.unique(shifts, return_counts=True)
 print("shift distribution:", dict(zip(vals.tolist(), cnts.tolist())))

@@ -13,13 +13,13 @@ p[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
 img = p.reshape(H, W).astype(np.float32)
 s0 = (img[0::2, 0::2] + img[0::2, 1::2] + img[1::2, 0::2] + img[1::2, 1::2]) / 4.0
 
-# vertical smoothness test : correlation ligne a ligne du raw
+# vertical smoothness test: line to line correlation of the raw
 def vstep(a):
     return float(np.median(np.abs(a[1:] - a[:-1])))
 print("S0 vertical median|dy| =", vstep(s0))
 print("S0 horizontal median|dx| =", float(np.median(np.abs(s0[:,1:]-s0[:,:-1]))))
 
-# crop plein res centre (zone relativement lisse), 1:1
+# full res crop centered (relatively smooth area), 1:1
 cy, cx = 500, 600
 crop = s0[cy:cy+180, cx:cx+240]
 lo, hi = np.percentile(s0, [2, 98])

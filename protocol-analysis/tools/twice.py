@@ -16,10 +16,10 @@ W = int(c.cmd("image_width")); H = int(c.cmd("image_height"))
 a = grab(c, W, H)
 b = grab(c, W, H)
 c.close()
-print("taille a,b:", len(a), len(b))
+print("size a,b:", len(a), len(b))
 la = min(len(a), len(b))
 diff = np.frombuffer(a[:la], np.uint8).astype(int) - np.frombuffer(b[:la], np.uint8).astype(int)
-print("octets identiques:", int(np.sum(diff==0)), "/", la, f"({100*np.mean(diff==0):.1f}%)")
-# ou commencent les differences ?
+print("identical bytes:", int(np.sum(diff==0)), "/", la, f"({100*np.mean(diff==0):.1f}%)")
+# where do the differences begin?
 nz = np.nonzero(diff)[0]
-print("premiere difference a l'offset:", int(nz[0]) if len(nz) else "aucune")
+print("first difference at offset:", int(nz[0]) if len(nz) else "none")

@@ -8,12 +8,12 @@ HDR = 16384
 raw = np.frombuffer(data[HDR:HDR + npix * 3 // 2], dtype=np.uint8).astype(np.uint16)
 b = raw.reshape(-1, 3)
 
-# Schema A : p0 = b0 | (b1&0xF)<<8 ; p1 = b1>>4 | b2<<4
+# Scheme A : p0 = b0 | (b1&0xF)<<8 ; p1 = b1>>4 | b2<<4
 pA = np.empty(npix, np.uint16)
 pA[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
 pA[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
 
-# Schema B : p0 = b0<<4 | b1>>4 ; p1 = (b1&0xF)<<8 | b2
+# Scheme B : p0 = b0<<4 | b1>>4 ; p1 = (b1&0xF)<<8 | b2
 pB = np.empty(npix, np.uint16)
 pB[0::2] = (b[:, 0] << 4) | (b[:, 1] >> 4)
 pB[1::2] = ((b[:, 1] & 0x0F) << 8) | b[:, 2]
@@ -25,4 +25,4 @@ for name, p in [("A", pA), ("B", pB)]:
     im = Image.fromarray(disp, "L")
     im.thumbnail((500, 500))
     im.save(f"unpack_{name}.png")
-    print(f"schema {name}: min={img.min()} max={img.max()} mean={img.mean():.1f}")
+    print(f"scheme {name}: min={img.min()} max={img.max()} mean={img.mean():.1f}")

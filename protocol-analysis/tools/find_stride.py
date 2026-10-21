@@ -22,7 +22,7 @@ def build(frame_off, stride, lead):
     return np.array(rows, dtype=np.uint16)  # (H, W)
 
 def vmetric(img):
-    # difference ligne a ligne (meme polariseur -> distance 2 lignes), zone centrale
+    # line to line difference (same polarizer -> distance 2 lines), central area
     c = img[400:600, 400:2000].astype(np.int32)
     return float(np.median(np.abs(c[2:] - c[:-2])))
 

@@ -25,9 +25,9 @@ def save(img, name):
 
 for s in ("A", "B"):
     img = unpack(s).astype(np.float32)
-    # intensite S0 = moyenne du super-pixel 2x2 (demosaique polar)
+    # S0 intensity = mean of the 2x2 super-pixel (polar demosaic)
     s0 = (img[0::2, 0::2] + img[0::2, 1::2] + img[1::2, 0::2] + img[1::2, 1::2]) / 4.0
     save(s0, f"intensity_{s}.png")
-    # mesure de "striping residuel" : variance moyenne entre lignes paires/impaires sur zone lisse
+    # measure of "residual striping": mean variance between even/odd lines on smooth area
     strip = np.mean(np.abs(img[0::2, :].mean(0) - img[1::2, :].mean(0)))
-    print(f"schema {s}: S0 shape={s0.shape} mean={s0.mean():.1f} striping_rows={strip:.2f}")
+    print(f"scheme {s}: S0 shape={s0.shape} mean={s0.mean():.1f} striping_rows={strip:.2f}")

@@ -1,5 +1,5 @@
-"""Transcript ASCII de la conversation bulk camera (EP2 OUT / EP82 IN).
-Montre les commandes et reponses en clair, et repere le transfert d'image.
+"""ASCII transcript of the camera bulk conversation (EP2 OUT / EP82 IN).
+Shows the commands and responses in clear, and spots the image transfer.
 """
 import struct, sys
 
@@ -18,12 +18,12 @@ def main(path):
         endpoint = p[21]; transfer = p[22]
         dataLength = struct.unpack_from("<I", p, 23)[0]
         payload = p[headerLen:headerLen+dataLength]
-        if transfer != 3:  # bulk seulement
+        if transfer != 3:  # bulk only
             continue
         tdir = "IN " if (endpoint & 0x80) else "OUT"
-        # gros transfert = image
+        # large transfer = image
         if dataLength > 4096:
-            print(f"[{pkt}] <<< IMAGE/DATA {tdir} ep=0x{endpoint:02x} dataLength={dataLength} octets >>>")
+            print(f"[{pkt}] <<< IMAGE/DATA {tdir} ep=0x{endpoint:02x} dataLength={dataLength} bytes >>>")
             continue
         txt = payload.split(b"\x00")[0].decode("latin1", "replace").strip()
         arrow = ">>" if tdir == "OUT" else "  <<"

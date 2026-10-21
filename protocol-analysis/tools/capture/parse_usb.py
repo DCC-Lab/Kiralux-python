@@ -1,9 +1,9 @@
-"""Parseur USBPcap autonome (pas de dependance).
-Decode les control transfers (surtout vendor) et les transferts bulk d'un
-capture USBPcap, pour cartographier le protocole de la camera.
+"""Standalone USBPcap parser (no dependency).
+Decodes the control transfers (mostly vendor) and the bulk transfers of a
+USBPcap capture, to map the camera protocol.
 
-Format: pcap classique, linktype 249 (DLT_USBPCAP).
-En-tete paquet USBPCAP_BUFFER_PACKET_HEADER (27 o) + 1 o 'stage' si control.
+Format: classic pcap, linktype 249 (DLT_USBPCAP).
+USBPCAP_BUFFER_PACKET_HEADER packet header (27 B) + 1 B 'stage' if control.
 """
 import struct
 import sys
@@ -27,13 +27,13 @@ def main(path):
     elif magic == 0xd4c3b2a1:
         endian = ">"
     else:
-        print("magic inattendu", hex(magic)); return
+        print("unexpected magic", hex(magic)); return
     linktype = struct.unpack_from(endian + "I", data, 20)[0]
-    print(f"# linktype={linktype} (249=USBPCAP)  taille={len(data)}")
+    print(f"# linktype={linktype} (249=USBPCAP)  size={len(data)}")
     off = 24
     pkt = 0
     ctrl_count = bulk_count = 0
-    # Pour recomposer setup+data des control transfers par irpId
+    # To recompose setup+data of control transfers by irpId
     pending = {}
     while off + 16 <= len(data):
         ts_sec, ts_usec, incl, orig = struct.unpack_from(endian + "IIII", data, off)
@@ -75,14 +75,14 @@ def main(path):
         elif transfer == 3:  # bulk
             if dataLength > 0:
                 bulk_count += 1
-                # pour les gros transferts (frame), payload tronque par snaplen
+                # for large transfers (frame), payload truncated by snaplen
                 head = payload[:32].hex() if payload else ""
                 print(f"[{pkt}] BULK dev={device} ep=0x{endpoint:02x} {tdir} dataLength={dataLength} head={head}")
         elif transfer == 1:  # interrupt
             if dataLength > 0:
                 print(f"[{pkt}] INTR dev={device} ep=0x{endpoint:02x} {tdir} len={dataLength} {payload[:16].hex()}")
 
-    print(f"\n# total paquets={pkt} control-setup={ctrl_count} bulk={bulk_count}")
+    print(f"\n# total packets={pkt} control-setup={ctrl_count} bulk={bulk_count}")
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else r"C:\Mac\Home\ThorImageRE\captures\cam_session.pcap")

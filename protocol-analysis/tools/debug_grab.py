@@ -46,15 +46,15 @@ t1=time.monotonic()
 while st["a"]>0 and time.monotonic()-t1<0.5:c.handleEventsTimeout(0.02)
 cmd("stop"); h.releaseInterface(0); c.close()
 
-print(f"hbin={a.hbin} vbin={a.vbin} sfr={a.sfr} nbuf={N} buf={a.bufkb}k : {W}x{H} recu {100*len(data)/target:.1f}% en {dt*1000:.0f}ms = {len(data)/max(dt,1e-3)/1e6:.1f}MB/s")
+print(f"hbin={a.hbin} vbin={a.vbin} sfr={a.sfr} nbuf={N} buf={a.bufkb}k : {W}x{H} received {100*len(data)/target:.1f}% in {dt*1000:.0f}ms = {len(data)/max(dt,1e-3)/1e6:.1f}MB/s")
 row=W*3//2; nrows=min(H,(len(data)-HDR)//row); nrows-=nrows%2
-if nrows<4: print("trop peu de donnees"); sys.exit()
+if nrows<4: print("too little data"); sys.exit()
 raw=np.frombuffer(bytes(data[HDR:HDR+nrows*row]),np.uint8).astype(np.uint16).reshape(-1,3)
 p=np.empty(nrows*W,np.uint16)
 p[0::2]=raw[:,0]|((raw[:,1]&0x0F)<<8);p[1::2]=(raw[:,1]>>4)|(raw[:,2]<<4)
 img=p.reshape(nrows,W)
 vmed=float(np.median(np.abs(img[1:].astype(int)-img[:-1])));hmed=float(np.median(np.abs(img[:,1:].astype(int)-img[:,:-1])))
-# ecart-type ligne-a-ligne pour detecter le striping meme regulier
+# line-to-line standard deviation to detect striping even if regular
 rowmeans=img.mean(1); strip=float(np.std(rowmeans[1:]-rowmeans[:-1]))
 print(f"   nrows={nrows} vmed={vmed:.1f} hmed={hmed:.1f} stripe(std drow)={strip:.1f}")
 a2=img.astype(np.float32);lo,hi=np.percentile(a2,[1,99])

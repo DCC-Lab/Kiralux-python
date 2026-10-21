@@ -4,12 +4,12 @@ Get-ChildItem "C:\Program Files\USBPcap","C:\Program Files (x86)\USBPcap" -Error
 "--- USBPcapCMD ---"
 (Get-ChildItem C:\ -Recurse -Filter USBPcapCMD.exe -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
-"`n=== Config/endpoints via Cypress CYUSB (pyusb peut lire les descripteurs?) ==="
+"`n=== Config/endpoints via Cypress CYUSB (can pyusb read the descriptors?) ==="
 & "C:\Program Files\Python313\python.exe" -c @"
 import usb.core, usb.util
 devs = list(usb.core.find(find_all=True, idVendor=0x1313))
 if not devs:
-    print('pyusb: aucun device 1313 visible via backend libusb (normal si lie a CYUSB3)')
+    print('pyusb: no 1313 device visible via libusb backend (normal if bound to CYUSB3)')
 for d in devs:
     print('dev', hex(d.idVendor), hex(d.idProduct))
     try:

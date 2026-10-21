@@ -53,5 +53,5 @@ for side in (256,512,768,1024,1536,2048):
     cmd("stop"); cmd(f"roi {l} {t} {l+W-1} {t+side-1}")
     Wr=int(cmd("image_width"));Hr=int(cmd("image_height"))
     got,tgt,nr,v,hh=grab(Wr,Hr)
-    print(f"ROI {Wr}x{Hr}: recu {100*got/tgt:5.1f}%  vmed={v:6.1f} hmed={hh:5.1f}  {'PROPRE' if v<60 else 'strie'}")
+    print(f"ROI {Wr}x{Hr}: received {100*got/tgt:5.1f}%  vmed={v:6.1f} hmed={hh:5.1f}  {'CLEAN' if v<60 else 'striped'}")
 h.releaseInterface(0);ctx.close()

@@ -1,5 +1,5 @@
-"""Acquiert UNE frame de la camera TSI via ctypes et l'enregistre en PNG.
-Preuve que la voie Python officielle (tl_camera_*) permet l'acquisition complete.
+"""Acquires ONE frame from the TSI camera via ctypes and saves it as PNG.
+Proof that the official Python path (tl_camera_*) allows complete acquisition.
 """
 import ctypes as C
 import os
@@ -71,7 +71,7 @@ def main():
             n = W * H
             arr = np.ctypeslib.as_array(img_ptr, shape=(n,)).copy()
             frame = arr.reshape((H, W))
-            print("frame recue, frame_count =", frame_count.value)
+            print("frame received, frame_count =", frame_count.value)
             break
         time.sleep(0.01)
 
@@ -80,11 +80,11 @@ def main():
     sdk.tl_camera_close_sdk()
 
     if frame is None:
-        print("AUCUNE frame recue")
+        print("NO frame received")
         return
 
     print(f"stats: min={frame.min()} max={frame.max()} mean={frame.mean():.1f} dtype={frame.dtype}")
-    # 12 bits -> 8 bits pour visualisation
+    # 12 bits -> 8 bits for visualization
     lo, hi = np.percentile(frame, [1, 99])
     disp = np.clip((frame.astype(np.float32) - lo) / max(hi - lo, 1) * 255, 0, 255).astype(np.uint8)
     Image.fromarray(disp, mode="L").save(OUT)

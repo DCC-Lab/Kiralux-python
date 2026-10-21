@@ -1,4 +1,4 @@
-# linktype=249 (249=USBPCAP)  taille=1047361
+# linktype=249 (249=USBPCAP)  size=1047361
 [1] CTRL SETUP dev=2 IN/STD/DEV bRequest=0x06 wValue=0x0100 wIndex=0x0000 wLength=18
 [3] CTRL SETUP dev=2 IN/STD/DEV bRequest=0x06 wValue=0x0200 wIndex=0x0000 wLength=83
 [5] CTRL SETUP dev=2 OUT/STD/DEV bRequest=0x09 wValue=0x0001 wIndex=0x0000 wLength=0
