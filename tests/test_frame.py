@@ -172,3 +172,25 @@ class TestPolarFrame:
         assert (fc[..., 0] == 0).all()                        # cyan: no red
         assert fc[0, -1, 1] > fc[0, 0, 1]                     # value follows S0
         assert (fc[..., 1] == fc[..., 2]).all()               # fully polarized: G == B
+
+
+class TestRawChannels:
+    def test_are_uint16_views_of_the_mosaic_without_a_copy(self):
+        mosaic = np.arange(8 * 6, dtype=np.uint16).reshape(8, 6)
+        frame = PolarFrame(mosaic)
+        for channel in frame.raw_channels:
+            assert channel.dtype == np.uint16 and channel.shape == (4, 3)
+            assert np.shares_memory(channel, mosaic)
+
+    def test_follow_the_sensor_layout_90_45_135_0(self):
+        # super-pixel [ 90  45 / 135  0 ]
+        frame = PolarFrame(np.array([[90, 45], [135, 0]], np.uint16))
+        i0, i45, i90, i135 = (c[0, 0] for c in frame.raw_channels)
+        assert (i0, i45, i90, i135) == (0, 45, 90, 135)
+
+    def test_float_channels_hold_the_same_values(self):
+        mosaic = np.random.default_rng(5).integers(0, 4096, (16, 12), dtype=np.uint16)
+        frame = PolarFrame(mosaic)
+        for raw, converted in zip(frame.raw_channels, frame.channels):
+            assert converted.dtype == np.float32
+            np.testing.assert_array_equal(converted, raw)

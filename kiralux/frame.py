@@ -91,11 +91,20 @@ class PolarFrame:
         return self.mosaic.shape
 
     @cached_property
-    def channels(self):
-        """The four analyser images (I0, I45, I90, I135), half-resolution."""
+    def raw_channels(self):
+        """The four analyser images (I0, I45, I90, I135) as uint16 views of the mosaic.
+
+        Half-resolution, with a stride of 2 in each direction: no copy, no conversion,
+        they share the mosaic's memory (and are overwritten if it is).
+        """
         m = self.mosaic
-        m = m[: m.shape[0] & ~1, : m.shape[1] & ~1].astype(np.float32)
+        m = m[: m.shape[0] & ~1, : m.shape[1] & ~1]
         return (m[1::2, 1::2], m[0::2, 1::2], m[0::2, 0::2], m[1::2, 0::2])
+
+    @cached_property
+    def channels(self):
+        """The four analyser images (I0, I45, I90, I135), half-resolution, as float32."""
+        return tuple(c.astype(np.float32) for c in self.raw_channels)
 
     @cached_property
     def stokes(self):
