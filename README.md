@@ -144,3 +144,15 @@ pyproject.toml           modern packaging (depends on hardwarelibrary>=2.2.0)
 Interoperability project to control hardware we own, under the
 [MIT](LICENSE) license. ThorLabs proprietary binaries and source are not
 redistributed here. ThorLabs, Kiralux and CS505MUP1 are trademarks of Thorlabs, Inc.
+
+## Tests
+
+```bash
+pip install -e ".[test]"
+pytest                       # no camera needed: a ProtocolDebugPort answers from protocol.json
+pytest --cov                 # coverage of the kiralux package
+pytest --hardware            # also run the tests that need a camera (fail if none is found)
+pytest --no-hardware         # never touch USB
+```
+
+Without a camera, the command dialog is answered by PyHardwareLibrary's `ProtocolDebugPort`, built from the same `protocol.json` the real driver sends with; the only hand-written part is the image stream and the 1024-byte framing (`tests/support.py`). The `camera` fixture runs the same contract tests against that mock and, when a Kiralux is plugged in, against the real camera. Tests marked `hardware` are skipped automatically when no camera is found.
