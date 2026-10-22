@@ -33,7 +33,7 @@ import numpy as np
 from hardwarelibrary.cameras.camera import CameraDevice
 from hardwarelibrary.communication.protocol import CommandDictionary
 
-from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE
+from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE, BLOCK_SIZE
 from .device import KiraluxPort, PROTOCOL_PATH
 from .capabilities import (
     ExposureCapability,
@@ -52,6 +52,20 @@ from .capabilities import (
 VID, PID = 0x1313, 0x4001
 EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83
 COMMAND_SIZE = 1024
+
+
+def drain_image_endpoint(port, endPoint, timeout: int = 100, limit: int = 256):
+    """Discard what is left on the image endpoint after an abrupt stop.
+
+    A process killed in the middle of a capture leaves part of the frame in the
+    camera's pipe, and every following capture then starts with that leftover and
+    comes out shifted and striped. Reading until the endpoint times out clears it.
+    """
+    for _ in range(limit):
+        try:
+            port.readStream(BLOCK_SIZE, endPoint=endPoint, timeout=timeout)
+        except Exception:
+            return
 
 
 class KiraluxError(RuntimeError):
@@ -147,6 +161,7 @@ class KiraluxCameraDevice(CameraDevice,
         if self.protocol is None:
             self.protocol = CommandDictionary.fromFile(PROTOCOL_PATH)
         self.performTransaction("STOP")
+        drain_image_endpoint(self.port, self.imageEndPoint)
         self.serial = self.performTransaction("SERNUM")["serial"]
         self.version = self.performTransaction("MODEL")["model"]
         self.validate_vocabulary()

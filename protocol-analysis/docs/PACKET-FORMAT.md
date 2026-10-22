@@ -32,7 +32,9 @@ Symptoms: `bytes.find(b"TSI\0")` is not 4; `pk[:, 0] == 0x90` is true for no pac
 
 Recovery that worked: after `STOP`, read EP 0x83 until it times out (short timeout, 100-300 ms) and discard what comes; the next frame starts at the right place and stays right. Unplugging and replugging the camera also clears it (the process-kill case once left the camera unresponsive to commands, `USBTimeoutError` on the first command, until replugged).
 
-**TODO (not done yet, untested on hardware at the time of writing)**: do that drain once at initialisation in `Kiralux.__init__` and `KiraluxCameraDevice.doInitializeDevice`, right after the first `STOP`. A cheap sanity check on every frame is that bytes 4..8 of packet 0 are `TSI\0`; raise a clear error (or resynchronise on the `TSI` tag) when they are not.
+Both drivers now do that drain once at initialisation, right after the first `STOP` (`drain_image_endpoint` in `camera_device.py`; it stops at the first timeout and is bounded to 256 reads). A cheap sanity check that is *not* implemented: bytes 4..8 of packet 0 are `TSI\0`, so a frame that does not start with it could be rejected or resynchronised.
+
+**Do not mistake saturation for stripes.** A frame at 30 ms on a bright scene had a mean of 3981 out of 4095; with a percentile contrast stretch the row-to-row noise of the saturated pixels shows up as horizontal stripes. The same scene at 1 ms (mean ~300, seam ratio 1.1, no stripes) was clean. Check `mosaic.max()` and the mean before suspecting the decoder.
 
 ## Other things that turned out *not* to matter
 

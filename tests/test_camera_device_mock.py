@@ -198,3 +198,18 @@ class TestAcquisition:
     def test_shutdown_while_not_capturing_is_harmless(self, mock_camera):
         assert not mock_camera.isCapturing
         mock_camera.shutdownDevice()
+
+
+class TestDrainImageEndpoint:
+    def test_stops_when_the_pipe_is_empty(self):
+        from kiralux.camera_device import drain_image_endpoint
+        port = FakeCameraPort()                          # not streaming: every read times out
+        drain_image_endpoint(port, 0x83)
+        assert port.stream_calls == []
+
+    def test_is_bounded_when_the_pipe_never_empties(self):
+        from kiralux.camera_device import drain_image_endpoint
+        port = FakeCameraPort(image=bytes(16384))
+        port.streaming = True
+        drain_image_endpoint(port, 0x83, limit=5)
+        assert len(port.stream_calls) == 5

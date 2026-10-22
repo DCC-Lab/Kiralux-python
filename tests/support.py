@@ -79,15 +79,21 @@ class FakeCameraPort(ProtocolDebugPort):
         self.image = image
         self.stream_calls = []
         self.sent = []                       # decoded text of every command written
+        self.streaming = False               # like the camera: only a started capture has data to read
 
     def writeData(self, data, endPoint=None):
-        self.sent.append(bytes(data).split(b"\x00")[0].decode("latin1"))
+        text = bytes(data).split(b"\x00")[0].decode("latin1")
+        self.sent.append(text)
+        if text.split(" ")[0] in ("start", "stop"):
+            self.streaming = text.startswith("start")
         return super().writeData(data, endPoint)
 
     def endPointForAddress(self, address):
         return address
 
     def readStream(self, length, endPoint=None, chunkSize=None, timeout=None):
+        if not self.streaming:
+            raise TimeoutError("nothing to read: no capture was started")
         self.stream_calls.append({"length": length, "endPoint": endPoint, "timeout": timeout})
         return bytearray(self.image[:length])
 
