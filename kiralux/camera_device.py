@@ -389,6 +389,7 @@ class KiraluxCameraDevice(CameraDevice,
     def rearm(self):
         """Make a new exposure or gain reach a running stream: the camera reads them at ARM only."""
         if self.streaming:
+            self.stopStreaming()                 # also empties the pipe: no frame with the old setting follows
             self.startStreaming()
 
     def nextFrame(self) -> PolarFrame:
