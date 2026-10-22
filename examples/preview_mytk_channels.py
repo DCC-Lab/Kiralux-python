@@ -1,7 +1,9 @@
-"""Live preview of the four analyser channels (I0, I45, I90, I135) with myTk.
+"""Live preview of the four analyser channels (I0, I45, I90, I135) with myTk, and of the
+angle (AoLP) and degree (DoLP) of linear polarization computed from them.
 
-Everything stays uint16 until the last step: the channels are strided views of the
-mosaic (no copy, no float), scaled to 8 bits (brightest 0.5% saturate) only to be drawn.
+The channels stay uint16 until the last step: they are strided views of the mosaic (no
+copy, no float), scaled to 8 bits (brightest 0.5% saturate) only to be drawn. AoLP and
+DoLP are computed on the same reduced images, in float32.
 
     python examples/preview_mytk_channels.py --exp 1000
 
@@ -17,9 +19,22 @@ from mytk import App, Image, Label
 
 from kiralux import KiraluxCameraDevice
 
-NAMES = ("I0", "I45", "I90", "I135")
-LAYOUT = ((0, 0), (0, 1), (1, 0), (1, 1))        # (row, column) of each channel
+NAMES = ("I0", "I45", "I90", "I135", "AoLP (hue: -90 to +90 deg)", "DoLP (white: 1)")
+LAYOUT = ((0, 0), (0, 1), (1, 0), (1, 1), (0, 2), (1, 2))        # (row, column) of each picture
 STEP = 3                                          # show every 3rd pixel: still a view, still no copy
+DARK = 0.1                                        # AoLP is not drawn where S0 is under this fraction of the display scale
+
+
+def polarization_pictures(views, top):
+    """AoLP as a hue (black where there is almost no light) and DoLP as gray levels."""
+    i0, i45, i90, i135 = (v.astype(np.float32) for v in views)
+    s1, s2 = i0 - i90, i45 - i135
+    s0 = (i0 + i45 + i90 + i135) / 2
+    dolp = np.minimum(np.hypot(s1, s2) / np.maximum(s0, 1), 1)
+    hue = ((np.arctan2(s2, s1) / (2 * np.pi) + 0.5) * 255).astype(np.uint8)    # 0.5 * arctan2, from -90 to +90 deg
+    value = ((s0 > DARK * 2 * top) * 255).astype(np.uint8)
+    aolp = PILImage.fromarray(np.dstack([hue, np.full_like(hue, 255), value]), "HSV").convert("RGB")
+    return aolp, PILImage.fromarray((dolp * 255).astype(np.uint8))
 
 
 class ChannelsApp(App):
@@ -37,7 +52,7 @@ class ChannelsApp(App):
             image.grid_into(self.window, row=2 * row + 1, column=column, padx=5, pady=5)
             self.images.append(image)
         self.status = Label("")
-        self.status.grid_into(self.window, row=4, column=0, columnspan=2, pady=(0, 10))
+        self.status.grid_into(self.window, row=4, column=0, columnspan=3, pady=(0, 10))
 
         self.grabber = threading.Thread(target=self.grab, daemon=True)
         self.grabber.start()
@@ -50,9 +65,10 @@ class ChannelsApp(App):
             views = [c[::STEP, ::STEP] for c in frame.raw_channels]
             top = max(int(np.percentile(v, 99.5)) for v in views) or 1   # one scale for all four, to keep their ratios (uint32: 4095 * 255 overflows uint16)
             pictures = [PILImage.fromarray((np.minimum(v, top).astype(np.uint32) * 255 // top).astype(np.uint8)) for v in views]
+            pictures += polarization_pictures(views, top)
             done = time.perf_counter()
             text = (f"{1 / (done - start):.1f} frames/s   capture {1000 * (snapped - start):.0f} ms"
-                    f"   to 8 bits {1000 * (done - snapped):.1f} ms")
+                    f"   to pictures {1000 * (done - snapped):.1f} ms")
             if not self.pending:                      # the window is behind: drop this frame, keep capturing
                 self.pending = True
                 self.schedule_on_main_thread(self.show, args=[pictures, text])
