@@ -138,6 +138,7 @@ class KiraluxCameraDevice(CameraDevice,
         self.serial: Optional[str] = None
         self.imageEndPoint = None
         self.port = port   # None -> real KiraluxPort; inject a ProtocolDebugPort to mock
+        self.frame_size = None   # (width, height) once the single-shot mode is set up; None = set it up again
 
     @staticmethod
     def available() -> list[str]:
@@ -169,6 +170,9 @@ class KiraluxCameraDevice(CameraDevice,
     def doShutdownDevice(self):
         super().doShutdownDevice()           # stop the capture loop if running
         if self.port is not None:
+            if self.frame_size is not None:  # left armed by the last capture
+                self.performTransaction("STOP")
+                self.frame_size = None
             self.port.close()
             self.port = None
 
@@ -242,6 +246,7 @@ class KiraluxCameraDevice(CameraDevice,
     def roi(self, box: tuple[int, int, int, int]):
         left, top, right, bottom = box
         self.performTransaction("ROI_SET", left=left, top=top, right=right, bottom=bottom)
+        self.frame_size = None
 
     @property
     def binning(self) -> tuple[int, int]:
@@ -253,6 +258,7 @@ class KiraluxCameraDevice(CameraDevice,
         h, v = hv
         self.performTransaction("HBIN_SET", hbin=int(h))
         self.performTransaction("VBIN_SET", vbin=int(v))
+        self.frame_size = None
 
     @property
     def black_level(self) -> int:
@@ -269,6 +275,7 @@ class KiraluxCameraDevice(CameraDevice,
     @frame_count.setter
     def frame_count(self, value: int):
         self.performTransaction("NFRAMES_SET", nframes=int(value))
+        self.frame_size = None
 
     @property
     def polar_phase(self) -> int:
@@ -321,17 +328,27 @@ class KiraluxCameraDevice(CameraDevice,
     def doCaptureFrame(self) -> PolarFrame:
         """Acquire one software-triggered frame as a :class:`PolarFrame`.
 
-        The CameraDevice capture loop (``captureFrames``/``start``) calls this.
+        The CameraDevice capture loop (``captureFrames``/``start``) calls this. The
+        single-shot mode is set up on the first frame only, and no ``STOP`` is sent
+        between frames (each one costs ~110 ms and the next ``ARM`` does not need it):
+        ~110 ms per frame instead of ~410 ms.
         """
-        self.performTransaction("STOP")
-        self.performTransaction("HWTRIG_SET", mode="none")
-        self.performTransaction("NFRAMES_SET", nframes=1)
-        width, height = self.sensor_size
+        if self.frame_size is None:          # once: these do not change from one frame to the next
+            self.performTransaction("STOP")
+            self.performTransaction("HWTRIG_SET", mode="none")
+            self.performTransaction("NFRAMES_SET", nframes=1)
+            self.frame_size = self.sensor_size
+        width, height = self.frame_size
         self.performTransaction("ARM")
         self.performTransaction("START")
-        raw = self.port.readStream(HEADER_SIZE + width * height * 3 // 2,
-                                   endPoint=self.imageEndPoint, timeout=3000)
-        self.performTransaction("STOP")
+        try:
+            raw = self.port.readStream(HEADER_SIZE + width * height * 3 // 2,
+                                       endPoint=self.imageEndPoint, timeout=3000)
+        except Exception:                    # an interrupted frame leaves stale data in the camera
+            self.performTransaction("STOP")
+            drain_image_endpoint(self.port, self.imageEndPoint)
+            self.frame_size = None
+            raise
         return PolarFrame(unpack_mosaic(bytes(raw), width, height))
 
     def snap(self, exposure_us: Optional[int] = None) -> PolarFrame:

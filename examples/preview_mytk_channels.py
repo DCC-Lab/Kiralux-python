@@ -1,7 +1,7 @@
 """Live preview of the four analyser channels (I0, I45, I90, I135) with myTk.
 
 Everything stays uint16 until the last step: the channels are strided views of the
-mosaic (no copy, no float), shifted from 12 to 8 bits only to be drawn.
+mosaic (no copy, no float), scaled to 8 bits (brightest 0.5% saturate) only to be drawn.
 
     python examples/preview_mytk_channels.py --exp 1000
 
@@ -47,7 +47,9 @@ class ChannelsApp(App):
             start = time.perf_counter()
             frame = self.camera.snap()
             snapped = time.perf_counter()
-            pictures = [PILImage.fromarray((c[::STEP, ::STEP] >> 4).astype(np.uint8)) for c in frame.raw_channels]
+            views = [c[::STEP, ::STEP] for c in frame.raw_channels]
+            top = max(int(np.percentile(v, 99.5)) for v in views) or 1   # one scale for all four, to keep their ratios
+            pictures = [PILImage.fromarray((np.minimum(v, top) * 255 // top).astype(np.uint8)) for v in views]
             done = time.perf_counter()
             text = (f"{1 / (done - start):.1f} frames/s   capture {1000 * (snapped - start):.0f} ms"
                     f"   to 8 bits {1000 * (done - snapped):.1f} ms")

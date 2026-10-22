@@ -158,7 +158,37 @@ class TestAcquisition:
         del port.sent[:]
         mock_camera.snap()
         assert port.sent == ["stop", "hwtrig none", "nframes 1", "image_width", "image_height",
-                             "arm", "start", "stop"]
+                             "arm", "start"]
+
+    def test_the_following_snaps_only_arm_and_start(self, mock_camera, port):
+        mock_camera.snap()
+        del port.sent[:]
+        mock_camera.snap()
+        assert port.sent == ["arm", "start"]
+
+    @pytest.mark.parametrize("change", [
+        lambda cam: setattr(cam, "roi", (0, 0, 99, 99)),
+        lambda cam: setattr(cam, "binning", (1, 1)),
+        lambda cam: setattr(cam, "frame_count", 2)])
+    def test_changing_the_geometry_or_frame_count_sets_the_mode_up_again(self, mock_camera, port, change):
+        mock_camera.snap()
+        change(mock_camera)
+        del port.sent[:]
+        mock_camera.snap()
+        assert port.sent[:3] == ["stop", "hwtrig none", "nframes 1"]
+
+    def test_shutdown_stops_a_camera_left_armed(self, mock_camera, port):
+        mock_camera.snap()
+        del port.sent[:]
+        mock_camera.shutdownDevice()
+        assert port.sent == ["stop"]
+
+    def test_a_failed_read_stops_drains_and_sets_up_again(self, mock_camera, port, monkeypatch):
+        mock_camera.snap()
+        monkeypatch.setattr(port, "readStream", lambda *a, **k: (_ for _ in ()).throw(TimeoutError()))
+        with pytest.raises(TimeoutError):
+            mock_camera.snap()
+        assert mock_camera.frame_size is None and port.sent[-1] == "stop"
 
     def test_snap_reads_header_plus_packed_pixels_from_the_image_endpoint(self, mock_camera, port):
         mock_camera.snap()
