@@ -48,8 +48,8 @@ class ChannelsApp(App):
             frame = self.camera.snap()
             snapped = time.perf_counter()
             views = [c[::STEP, ::STEP] for c in frame.raw_channels]
-            top = max(int(np.percentile(v, 99.5)) for v in views) or 1   # one scale for all four, to keep their ratios
-            pictures = [PILImage.fromarray((np.minimum(v, top) * 255 // top).astype(np.uint8)) for v in views]
+            top = max(int(np.percentile(v, 99.5)) for v in views) or 1   # one scale for all four, to keep their ratios (uint32: 4095 * 255 overflows uint16)
+            pictures = [PILImage.fromarray((np.minimum(v, top).astype(np.uint32) * 255 // top).astype(np.uint8)) for v in views]
             done = time.perf_counter()
             text = (f"{1 / (done - start):.1f} frames/s   capture {1000 * (snapped - start):.0f} ms"
                     f"   to 8 bits {1000 * (done - snapped):.1f} ms")
