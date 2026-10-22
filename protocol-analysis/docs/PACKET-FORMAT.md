@@ -32,6 +32,10 @@ How the format was found (all reproducible with a raw frame):
 
 Total check: 16324 bytes in packet 0 + 459 x 16380 = 7 534 744 bytes = 5 023 162 px, more than the 5 013 504 needed. The surplus is simply discarded.
 
+## Continuous mode (from the independent driver, not yet measured by us on hardware)
+
+`stop`, `exp`, `gain`, `nframes 0` (unlimited frames per trigger), `arm`, `start`, then frames follow back to back: each is a whole number of 16384-byte packets starting with `90 90 00 00 TSI\0` (`stream_size` gives the length). They report ~27 to 32 frames/s at full size (the camera's ceiling) with 4 MB bulk reads from pyusb; PyHardwareLibrary's default 16 KB reads top out near 70 MB/s (8.7 frames/s with one `ARM`/`START` per frame). `exp` and `gain` are only picked up at `arm`: sent to a running stream they change nothing, so the stream has to be stopped and armed again. `KiraluxCameraDevice.startStreaming()` implements this (4 MB reads, resynchronisation on the packet 0 header, re-arm when the exposure or gain changes).
+
 ## The stale-data trap (after an abrupt stop)
 
 If a process is killed in the middle of a capture (`kill`, a crash), the camera keeps ~190 KB (193 536 bytes measured) of the interrupted frame in its pipe. Every following capture then **starts with that leftover**: the frame header (`TSI`) shows up at byte 194 564 instead of byte 4, every packet boundary is wrong by the same amount, and the image comes out scrambled (stripes, vertical seam, fringes that are not in the scene) even though the decoder is right. It persists across captures, because each capture leaves the tail of its own frame behind.

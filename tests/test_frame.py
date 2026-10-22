@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, HEADER_SIZE, END_TAG, TAG_SIZE
+from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, stream_size, HEADER_SIZE, END_TAG, TAG_SIZE, FRAME_START
 
 from support import pack_mosaic, frame_bytes, mosaic_from_channels
 
@@ -68,6 +68,20 @@ class TestUnpackMosaic:
         assert m.max() <= 4095
         # same-polarizer neighbours (two rows apart) agree in a real image; scrambled bits would not
         assert np.median(np.abs(m[2:] - m[:-2])) < 200
+
+
+class TestStreamSize:
+    def test_a_full_frame_is_460_packets(self):
+        assert stream_size(2448, 2048) == 460 * 16384
+
+    @pytest.mark.parametrize("width, height", [(64, 32), (256, 256), (2448, 2048), (612, 512)])
+    def test_it_is_the_whole_packets_that_hold_the_frame(self, width, height):
+        data = frame_bytes(width, height)[0]
+        size = stream_size(width, height)
+        assert size % 16384 == 0 and size - 16384 < len(data) <= size
+
+    def test_a_frame_starts_with_the_magic_and_the_first_tag(self):
+        assert frame_bytes(64, 32)[0][:8] == FRAME_START
 
 
 def test_pack_then_unpack_is_the_identity_on_odd_pixel_counts():

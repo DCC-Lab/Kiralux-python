@@ -39,8 +39,9 @@ def pack_mosaic(mosaic: np.ndarray) -> bytes:
     stream[1::3] = (even >> 8) | ((odd & 0x0F) << 4)
     stream[2::3] = odd >> 4
 
-    tags = bytearray(52)                            # magic + tag list, then the end-of-tags marker
-    tags[:2] = b"\x90\x90"
+    tags = bytearray(b"\x90\x90\x00\x00")                 # magic + packet number, then the seven 8-byte tags
+    for name in (b"TSI\x00", b"FCNT", b"PCKH", b"PCKL", b"IFMT", b"IOFF"):
+        tags += name + bytes(4)
     tags += END_TAG + bytes(TAG_SIZE - len(END_TAG))
     first = BLOCK_SIZE - len(tags)
     chunks = [stream[:first]] + [stream[i:i + PACKET_DATA] for i in range(first, stream.size, PACKET_DATA)]
@@ -79,12 +80,17 @@ class FakeCameraPort(ProtocolDebugPort):
         self.stream_calls = []
         self.sent = []                       # decoded text of every command written
         self.streaming = False               # like the camera: only a started capture has data to read
+        self.continuous = False              # "nframes 0": the frame is sent again and again
+        self.cursor = 0
 
     def writeData(self, data, endPoint=None):
         text = bytes(data).split(b"\x00")[0].decode("latin1")
         self.sent.append(text)
+        if text.startswith("nframes"):
+            self.continuous = text == "nframes 0"
         if text.split(" ")[0] in ("start", "stop"):
             self.streaming = text.startswith("start")
+            self.cursor = 0
         return super().writeData(data, endPoint)
 
     def endPointForAddress(self, address):
@@ -94,7 +100,14 @@ class FakeCameraPort(ProtocolDebugPort):
         if not self.streaming:
             raise TimeoutError("nothing to read: no capture was started")
         self.stream_calls.append({"length": length, "endPoint": endPoint, "timeout": timeout})
-        return bytearray(self.image[:length])
+        if not self.continuous:
+            return bytearray(self.image[:length])
+        out = bytearray()
+        while len(out) < length:             # the same frame over and over, read in arbitrary chunks
+            take = self.image[self.cursor: self.cursor + length - len(out)]
+            out += take
+            self.cursor = (self.cursor + len(take)) % len(self.image)
+        return out
 
 
 class FramedDebugPort(FakeCameraPort):

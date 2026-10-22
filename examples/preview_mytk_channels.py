@@ -66,7 +66,7 @@ class ChannelsApp(App):
 
     def stop(self):
         self.running = False
-        self.grabber.join()          # let the capture in flight finish, so the camera is left idle
+        self.grabber.join()          # let the read in flight finish; shutdownDevice() then stops the stream
 
 
 def main():
@@ -77,6 +77,7 @@ def main():
     camera = KiraluxCameraDevice()
     camera.initializeDevice()
     camera.setExposure(args.exp)
+    camera.startStreaming()                       # arm once: frames then arrive back to back
     app = ChannelsApp(camera)
     try:
         app.mainloop()

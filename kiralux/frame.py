@@ -26,6 +26,15 @@ PACKET_HEADER = 4
 PACKET_DATA = BLOCK_SIZE - PACKET_HEADER
 TAG_SIZE = 8
 END_TAG = b"ENDT"
+FRAME_HEADER = 60                    # packet 0: magic (4) + seven 8-byte tags
+FRAME_START = b"\x90\x90\x00\x00TSI\x00"   # how packet 0 of a frame begins (packet 0, then the first tag)
+
+
+def stream_size(width: int, height: int) -> int:
+    """Bytes the camera streams for one frame: whole packets, headers included."""
+    need = width * height * 3 // 2
+    first = BLOCK_SIZE - FRAME_HEADER
+    return BLOCK_SIZE * (1 + max(0, -(-(need - first) // PACKET_DATA)))
 
 
 def triplets(raw: np.ndarray) -> np.ndarray:

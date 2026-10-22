@@ -33,7 +33,7 @@ import numpy as np
 from hardwarelibrary.cameras.camera import CameraDevice
 from hardwarelibrary.communication.protocol import CommandDictionary
 
-from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE, BLOCK_SIZE
+from .frame import PolarFrame, unpack_mosaic, stream_size, HEADER_SIZE, BLOCK_SIZE, FRAME_START
 from .device import KiraluxPort, PROTOCOL_PATH
 from .capabilities import (
     ExposureCapability,
@@ -52,6 +52,7 @@ from .capabilities import (
 VID, PID = 0x1313, 0x4001
 EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83
 COMMAND_SIZE = 1024
+STREAM_CHUNK = 4 * 1024 * 1024    # bytes per read while streaming (whole packets); 16 KB reads top out near 70 MB/s
 
 
 def drain_image_endpoint(port, endPoint, timeout: int = 100, limit: int = 256):
@@ -139,6 +140,8 @@ class KiraluxCameraDevice(CameraDevice,
         self.imageEndPoint = None
         self.port = port   # None -> real KiraluxPort; inject a ProtocolDebugPort to mock
         self.frame_size = None   # (width, height) once the single-shot mode is set up; None = set it up again
+        self.streaming = False   # continuous acquisition: armed once, frames keep coming
+        self.stream = bytearray()
 
     @staticmethod
     def available() -> list[str]:
@@ -170,6 +173,8 @@ class KiraluxCameraDevice(CameraDevice,
     def doShutdownDevice(self):
         super().doShutdownDevice()           # stop the capture loop if running
         if self.port is not None:
+            if self.streaming:
+                self.stopStreaming()
             if self.frame_size is not None:  # left armed by the last capture
                 self.performTransaction("STOP")
                 self.frame_size = None
@@ -228,6 +233,7 @@ class KiraluxCameraDevice(CameraDevice,
     @exposure_us.setter
     def exposure_us(self, microseconds: int):
         self.performTransaction("EXP_SET", exposure=int(microseconds))
+        self.rearm()
 
     @property
     def gain_db(self) -> int:
@@ -236,6 +242,7 @@ class KiraluxCameraDevice(CameraDevice,
     @gain_db.setter
     def gain_db(self, value: int):
         self.performTransaction("GAIN_SET", gain=int(value))
+        self.rearm()
 
     @property
     def roi(self) -> tuple[int, int, int, int]:
@@ -333,6 +340,8 @@ class KiraluxCameraDevice(CameraDevice,
         between frames (each one costs ~110 ms and the next ``ARM`` does not need it):
         ~110 ms per frame instead of ~410 ms.
         """
+        if self.streaming:
+            return self.nextFrame()
         if self.frame_size is None:          # once: these do not change from one frame to the next
             self.performTransaction("STOP")
             self.performTransaction("HWTRIG_SET", mode="none")
@@ -350,6 +359,59 @@ class KiraluxCameraDevice(CameraDevice,
             self.frame_size = None
             raise
         return PolarFrame(unpack_mosaic(bytes(raw), width, height))
+
+    # -- continuous acquisition ---------------------------------------------- #
+    def startStreaming(self):
+        """Arm once and let the camera send frames back to back (~30 frames/s at full size).
+
+        After this, ``snap()`` / ``doCaptureFrame()`` return the next frame of the stream
+        without any command. Exposure and gain are only picked up when the camera is
+        armed, so changing them while streaming re-arms (see :meth:`rearm`).
+        """
+        self.performTransaction("STOP")
+        self.performTransaction("HWTRIG_SET", mode="none")
+        self.performTransaction("NFRAMES_SET", nframes=0)         # 0: unlimited frames per trigger
+        self.stream_shape = self.sensor_size
+        self.stream_timeout = 4000 + self.exposure_us // 1000     # ms: a frame cannot come faster than its exposure
+        self.stream = bytearray()
+        self.frame_size = None                                    # single-shot mode is no longer set up
+        self.performTransaction("ARM")
+        self.performTransaction("START")
+        self.streaming = True
+
+    def stopStreaming(self):
+        """Stop the stream and empty the image pipe (a half-full pipe leaves the next capture shifted)."""
+        self.streaming = False
+        self.stream = bytearray()
+        self.performTransaction("STOP")
+        drain_image_endpoint(self.port, self.imageEndPoint, limit=2048)
+
+    def rearm(self):
+        """Make a new exposure or gain reach a running stream: the camera reads them at ARM only."""
+        if self.streaming:
+            self.startStreaming()
+
+    def nextFrame(self) -> PolarFrame:
+        """The next complete frame of the stream, resynchronising on the packet 0 header if needed."""
+        width, height = self.stream_shape
+        size = stream_size(width, height)
+        buffer = self.stream
+        try:
+            while True:
+                start = buffer.find(FRAME_START)
+                if start >= 0:
+                    del buffer[:start]
+                    if len(buffer) >= size:
+                        frame = bytes(buffer[:size])
+                        del buffer[:size]
+                        return PolarFrame(unpack_mosaic(frame, width, height))
+                else:
+                    del buffer[:max(0, len(buffer) - len(FRAME_START) + 1)]   # keep a start split across reads
+                buffer += self.port.readStream(STREAM_CHUNK, endPoint=self.imageEndPoint,
+                                               chunkSize=STREAM_CHUNK, timeout=self.stream_timeout)
+        except Exception:
+            self.stopStreaming()
+            raise
 
     def snap(self, exposure_us: Optional[int] = None) -> PolarFrame:
         """Convenience: optionally set the exposure, then capture one frame."""
