@@ -21,3 +21,7 @@ dist/
 *.egg-info/
 .eggs/
 .DS_Store
+
+# Test artifacts
+.coverage
+.pytest_cache/

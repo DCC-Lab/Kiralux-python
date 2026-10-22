@@ -28,6 +28,9 @@ dependencies = [
 [project.optional-dependencies]
 # Image I/O used by the scripts in examples/ (not needed by the driver itself).
 examples = ["pillow"]
+# Test suite: `pytest` runs everything that does not need a camera; with a camera
+# plugged in, the `hardware` tests run too (`pytest --hardware`, or `--no-hardware` to skip them).
+test = ["pytest", "pytest-cov"]
 
 [project.urls]
 Homepage = "https://github.com/DCC-Lab/Kiralux-python"
@@ -38,3 +41,21 @@ packages = ["kiralux"]
 
 [tool.setuptools.package-data]
 kiralux = ["protocol.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "hardware: needs a Kiralux camera plugged in over USB (skipped when none is found)",
+]
+
+[tool.coverage.run]
+source = ["kiralux"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "@abstractmethod",
+    "if __name__ == .__main__.:",
+]
