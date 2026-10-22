@@ -30,7 +30,7 @@ How the format was found (all reproducible with a raw frame):
 2. With 5460 triplets/block a vertical seam remained. Searching the start offset `q` in packet 0 (triplet-aligned, `3..400`) for the smallest column discontinuity gave `q = 60` with a ratio max/median jump of 1.3 (35 for every other offset), no seam, no junk rows at the bottom.
 3. The four bytes at the start of each packet are `90 90 <n> 00` with `n` = 1, 2, 3...; packet 0 starts `90 90 00 00 54 53 49 00` (`..TSI.`). The tags end with `ENDT` followed by a 4-byte value.
 
-Total check: 16324 bytes in packet 0 + 459 x 16380 = 7 534 144 bytes = 5 022 762 px worth, more than the 5 013 504 needed. The surplus is simply discarded.
+Total check: 16324 bytes in packet 0 + 459 x 16380 = 7 534 744 bytes = 5 023 162 px, more than the 5 013 504 needed. The surplus is simply discarded.
 
 ## The stale-data trap (after an abrupt stop)
 
