@@ -1,8 +1,8 @@
 """Test doubles shared by the Kiralux test suite. No camera needed.
 
 * :func:`pack_mosaic` — the inverse of ``unpack_mosaic``: builds the exact bytes the
-  camera streams on EP 0x83 (16384-byte packets: a 3-byte header, 12-bit packed
-  pixels, one padding byte; packet 0 also carries the tag list, ending with ENDT).
+  camera streams on EP 0x83 (16384-byte packets: a 4-byte header, then 12-bit
+  packed pixels, one continuous stream; packet 0 also carries the tag list, ending with ENDT).
 * :class:`FakeCameraPort` — a ``ProtocolDebugPort`` (answers every command of
   ``protocol.json`` from what it was last told) that also serves an image stream.
 * :class:`FramedDebugPort` — the same, plus the camera's 1024-byte framing, for the
@@ -40,15 +40,14 @@ def pack_mosaic(mosaic: np.ndarray) -> bytes:
     stream[2::3] = odd >> 4
 
     tags = bytearray(52)                            # magic + tag list, then the end-of-tags marker
-    tags[:3] = b"\x90\x90\x00"
+    tags[:2] = b"\x90\x90"
     tags += END_TAG + bytes(TAG_SIZE - len(END_TAG))
-    first = BLOCK_SIZE - 1 - len(tags)
+    first = BLOCK_SIZE - len(tags)
     chunks = [stream[:first]] + [stream[i:i + PACKET_DATA] for i in range(first, stream.size, PACKET_DATA)]
     packets = []
     for number, chunk in enumerate(chunks):
-        head = bytes(tags) if number == 0 else bytes([0x90, 0x90, number & 0xFF])
-        full = len(head) + chunk.size == BLOCK_SIZE - 1
-        packets.append(head + chunk.tobytes() + (b"\x00" if full else b""))
+        head = bytes(tags) if number == 0 else bytes([0x90, 0x90, number & 0xFF, number >> 8])
+        packets.append(head + chunk.tobytes())
     return b"".join(packets)
 
 

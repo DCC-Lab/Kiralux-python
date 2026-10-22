@@ -29,12 +29,21 @@ class TestUnpackMosaic:
     def test_pixels_never_exceed_12_bits(self, frame):
         assert unpack_mosaic(frame[0], 2448, 2048).max() <= 4095
 
-    def test_every_packet_gives_up_four_bytes_to_its_header_and_padding(self):
-        # 256x256 = 98304 bytes: 16323 in packet 0 (after its tags), then 16380 per packet
+    def test_every_packet_gives_up_four_bytes_to_its_header(self):
+        # 256x256 = 98304 bytes: 16324 in packet 0 (after its tags), then 16380 per packet
         data, mosaic = frame_bytes(256, 256, seed=1)
-        assert len(data) == 6 * 16384 + 3 + 81            # packet 0, five full packets, a short last one
-        assert data[16384:16387] == bytes([0x90, 0x90, 1])
+        assert len(data) == 6 * 16384 + 4 + 80            # packet 0, five full packets, a short last one
+        assert data[16384:16388] == bytes([0x90, 0x90, 1, 0])
         np.testing.assert_array_equal(unpack_mosaic(data, 256, 256), mosaic)
+
+    def test_the_last_byte_of_a_packet_is_pixel_data(self):
+        # 16324 bytes after the tags is not a multiple of 3: a triplet straddles packets 0 and 1
+        data, mosaic = frame_bytes(256, 256, seed=5)
+        assert 16324 % 3 == 1
+        out = unpack_mosaic(data, 256, 256).ravel()
+        first_of_packet_1 = (16324 // 3 + 1) * 2 - 1       # the second pixel of the straddling triplet
+        np.testing.assert_array_equal(out[first_of_packet_1 - 2: first_of_packet_1 + 3],
+                                      mosaic.ravel()[first_of_packet_1 - 2: first_of_packet_1 + 3])
 
     def test_a_frame_shorter_than_a_block_is_a_plain_stream(self):
         data, mosaic = frame_bytes(64, 32, seed=2)

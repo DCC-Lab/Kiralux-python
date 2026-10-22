@@ -13,16 +13,17 @@ import numpy as np
 
 # Image framing on endpoint 0x83: the stream is a sequence of 16384-byte packets.
 #
-#   packet 0  : 0x90 0x90 <seq> | tag list (TSI, FCNT, PCKH, PCKL, IFMT, IOFF, ENDT;
-#               8 bytes each) | the first pixels of the image | 1 padding byte
-#   packet n  : 0x90 0x90 <seq> | 16380 bytes = 5460 12-bit triplets | 1 padding byte
+#   packet 0  : 0x90 0x90 <seq16> | tag list (TSI, FCNT, PCKH, PCKL, IFMT, IOFF, ENDT;
+#               8 bytes each) | pixels, up to the end of the packet
+#   packet n  : 0x90 0x90 <seq16> | 16380 bytes of pixels
 #
-# The pixel stream is therefore *not* contiguous across the raw bytes: every packet
-# gives up 4 bytes to its header and padding, and 12-bit triplets restart in each.
+# Once the headers are stripped (60 bytes on packet 0, 4 on the others) the pixels are
+# one continuous 12-bit packed stream: a triplet may straddle two packets, and the last
+# byte of a packet is pixel data (not padding).
 HEADER_SIZE = 16384                  # packet 0 (tags + first pixels)
 BLOCK_SIZE = 16384                   # every packet
-PACKET_HEADER = 3
-PACKET_DATA = BLOCK_SIZE - PACKET_HEADER - 1
+PACKET_HEADER = 4
+PACKET_DATA = BLOCK_SIZE - PACKET_HEADER
 TAG_SIZE = 8
 END_TAG = b"ENDT"
 
@@ -39,17 +40,15 @@ def triplets(raw: np.ndarray) -> np.ndarray:
 def unpack_mosaic(data: bytes, width: int, height: int) -> np.ndarray:
     """Unpack a 12-bit Mono12p frame into a (height, width) uint16 mosaic.
 
-    Packet 0 carries a tag list followed by the first pixels; the following packets
-    carry 5460 triplets each after a 3-byte header. Missing pixels are zero-padded.
+    Packet 0 carries a tag list followed by the first pixels; the other packets carry
+    a 4-byte header followed by pixels. Missing pixels are zero-padded.
     """
     raw = np.frombuffer(data, np.uint8)
-    first = raw[:BLOCK_SIZE]
-    tags_end = bytes(first).find(END_TAG)
+    tags_end = bytes(raw[:BLOCK_SIZE]).find(END_TAG)
     start = tags_end + TAG_SIZE if tags_end >= 0 else PACKET_HEADER
-    parts = [triplets(first[start:BLOCK_SIZE - 1])]
-    for offset in range(BLOCK_SIZE, raw.size, BLOCK_SIZE):
-        parts.append(triplets(raw[offset + PACKET_HEADER: min(offset + BLOCK_SIZE - 1, raw.size)]))
-    pixels = np.concatenate(parts)
+    payload = [raw[start:BLOCK_SIZE]] + [raw[offset + PACKET_HEADER: offset + BLOCK_SIZE]
+                                         for offset in range(BLOCK_SIZE, raw.size, BLOCK_SIZE)]
+    pixels = triplets(np.concatenate(payload))
     need = width * height
     if pixels.size < need:
         pixels = np.concatenate([pixels, np.zeros(need - pixels.size, np.uint16)])
