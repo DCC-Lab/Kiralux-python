@@ -1,8 +1,8 @@
 """Test doubles shared by the Kiralux test suite. No camera needed.
 
 * :func:`pack_mosaic` — the inverse of ``unpack_mosaic``: builds the exact bytes the
-  camera streams on EP 0x83 (16384-byte header, 12-bit packed pixels, 16383 "main"
-  bytes + 1 "tail" byte per 16384-byte block).
+  camera streams on EP 0x83 (16384-byte packets: a 3-byte header, 12-bit packed
+  pixels, one padding byte; packet 0 also carries the tag list, ending with ENDT).
 * :class:`FakeCameraPort` — a ``ProtocolDebugPort`` (answers every command of
   ``protocol.json`` from what it was last told) that also serves an image stream.
 * :class:`FramedDebugPort` — the same, plus the camera's 1024-byte framing, for the
@@ -19,7 +19,7 @@ from hardwarelibrary.communication.debugport import ProtocolDebugPort
 
 from kiralux.camera_device import Command
 from kiralux.device import PROTOCOL_PATH, COMMAND_SIZE
-from kiralux.frame import HEADER_SIZE, BLOCK_SIZE, BLOCK_MAIN
+from kiralux.frame import BLOCK_SIZE, PACKET_HEADER, PACKET_DATA, TAG_SIZE, END_TAG
 
 WIDTH, HEIGHT = 2448, 2048
 
@@ -39,14 +39,17 @@ def pack_mosaic(mosaic: np.ndarray) -> bytes:
     stream[1::3] = (even >> 8) | ((odd & 0x0F) << 4)
     stream[2::3] = odd >> 4
 
-    nbytes = stream.size
-    nblocks = nbytes // BLOCK_SIZE
-    main = stream[: nblocks * BLOCK_MAIN].reshape(nblocks, BLOCK_MAIN)
-    rest = stream[nblocks * BLOCK_MAIN:]           # tail bytes, then the short remainder
-    blocks = np.empty((nblocks, BLOCK_SIZE), np.uint8)
-    blocks[:, :BLOCK_MAIN] = main
-    blocks[:, BLOCK_MAIN] = rest[:nblocks]
-    return bytes(HEADER_SIZE) + blocks.tobytes() + rest[nblocks:].tobytes()
+    tags = bytearray(52)                            # magic + tag list, then the end-of-tags marker
+    tags[:3] = b"\x90\x90\x00"
+    tags += END_TAG + bytes(TAG_SIZE - len(END_TAG))
+    first = BLOCK_SIZE - 1 - len(tags)
+    chunks = [stream[:first]] + [stream[i:i + PACKET_DATA] for i in range(first, stream.size, PACKET_DATA)]
+    packets = []
+    for number, chunk in enumerate(chunks):
+        head = bytes(tags) if number == 0 else bytes([0x90, 0x90, number & 0xFF])
+        full = len(head) + chunk.size == BLOCK_SIZE - 1
+        packets.append(head + chunk.tobytes() + (b"\x00" if full else b""))
+    return b"".join(packets)
 
 
 def frame_bytes(width=WIDTH, height=HEIGHT, seed=0) -> tuple[bytes, np.ndarray]:

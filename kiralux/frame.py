@@ -11,37 +11,45 @@ from functools import cached_property
 
 import numpy as np
 
-# Image framing on endpoint 0x83: a 16384-byte header, then 12-bit packed pixels
-# in 16384-byte blocks. 12-bit triplets do NOT cross a block boundary, so each
-# block holds 16383 "main" bytes + 1 "tail" byte.
-HEADER_SIZE = 16384
-BLOCK_SIZE = 16384
-BLOCK_MAIN = BLOCK_SIZE - 1
+# Image framing on endpoint 0x83: the stream is a sequence of 16384-byte packets.
+#
+#   packet 0  : 0x90 0x90 <seq> | tag list (TSI, FCNT, PCKH, PCKL, IFMT, IOFF, ENDT;
+#               8 bytes each) | the first pixels of the image | 1 padding byte
+#   packet n  : 0x90 0x90 <seq> | 16380 bytes = 5460 12-bit triplets | 1 padding byte
+#
+# The pixel stream is therefore *not* contiguous across the raw bytes: every packet
+# gives up 4 bytes to its header and padding, and 12-bit triplets restart in each.
+HEADER_SIZE = 16384                  # packet 0 (tags + first pixels)
+BLOCK_SIZE = 16384                   # every packet
+PACKET_HEADER = 3
+PACKET_DATA = BLOCK_SIZE - PACKET_HEADER - 1
+TAG_SIZE = 8
+END_TAG = b"ENDT"
+
+
+def triplets(raw: np.ndarray) -> np.ndarray:
+    """Unpack 12-bit Mono12p bytes (2 pixels per 3 bytes) into uint16 pixels."""
+    b = raw[: raw.size // 3 * 3].reshape(-1, 3).astype(np.uint16)
+    out = np.empty(b.shape[0] * 2, np.uint16)
+    out[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
+    out[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
+    return out
 
 
 def unpack_mosaic(data: bytes, width: int, height: int) -> np.ndarray:
     """Unpack a 12-bit Mono12p frame into a (height, width) uint16 mosaic.
 
-    Triplets do not cross the 16384-byte block boundaries; each block holds 16383
-    "main" bytes plus one "tail" byte, and the tail bytes (concatenated) form the
-    final pixels of the image.
+    Packet 0 carries a tag list followed by the first pixels; the following packets
+    carry 5460 triplets each after a 3-byte header. Missing pixels are zero-padded.
     """
-    body = memoryview(data)[HEADER_SIZE:]
-    n = len(body) // BLOCK_SIZE
-    blocks = np.frombuffer(body[: n * BLOCK_SIZE], np.uint8).reshape(n, BLOCK_SIZE)
-
-    def triplets(raw: np.ndarray) -> np.ndarray:
-        b = raw.reshape(-1, 3).astype(np.uint16)
-        out = np.empty(b.shape[0] * 2, np.uint16)
-        out[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
-        out[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
-        return out
-
-    main = triplets(blocks[:, :BLOCK_MAIN])
-    tail = np.concatenate([blocks[:, BLOCK_MAIN], np.frombuffer(body[n * BLOCK_SIZE:], np.uint8)])
-    extra = triplets(tail[: len(tail) // 3 * 3]) if len(tail) >= 3 else main[:0]
-
-    pixels = np.concatenate([main, extra])
+    raw = np.frombuffer(data, np.uint8)
+    first = raw[:BLOCK_SIZE]
+    tags_end = bytes(first).find(END_TAG)
+    start = tags_end + TAG_SIZE if tags_end >= 0 else PACKET_HEADER
+    parts = [triplets(first[start:BLOCK_SIZE - 1])]
+    for offset in range(BLOCK_SIZE, raw.size, BLOCK_SIZE):
+        parts.append(triplets(raw[offset + PACKET_HEADER: min(offset + BLOCK_SIZE - 1, raw.size)]))
+    pixels = np.concatenate(parts)
     need = width * height
     if pixels.size < need:
         pixels = np.concatenate([pixels, np.zeros(need - pixels.size, np.uint16)])

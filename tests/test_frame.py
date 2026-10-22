@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, HEADER_SIZE
+from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, HEADER_SIZE, END_TAG, TAG_SIZE
 
 from support import pack_mosaic, frame_bytes, mosaic_from_channels
 
@@ -17,7 +17,7 @@ REAL_CAPTURE = os.path.join(os.path.dirname(__file__), "..", "protocol-analysis"
 class TestUnpackMosaic:
     def test_a_triplet_holds_two_12_bit_pixels(self):
         # known answer, worked by hand: AB CD EF -> 0xDAB, 0xEFC
-        data = bytes(HEADER_SIZE) + bytes([0xAB, 0xCD, 0xEF])
+        data = bytes(52) + END_TAG + bytes(TAG_SIZE - len(END_TAG)) + bytes([0xAB, 0xCD, 0xEF])
         assert unpack_mosaic(data, 2, 1).tolist() == [[0xDAB, 0xEFC]]
 
     def test_full_size_frame_round_trips(self, frame):
@@ -29,10 +29,11 @@ class TestUnpackMosaic:
     def test_pixels_never_exceed_12_bits(self, frame):
         assert unpack_mosaic(frame[0], 2448, 2048).max() <= 4095
 
-    def test_blocks_tail_bytes_form_the_last_pixels(self):
-        # 256x256 is exactly 6 blocks: 6*16383 main bytes, and 6 tail bytes = 4 pixels
+    def test_every_packet_gives_up_four_bytes_to_its_header_and_padding(self):
+        # 256x256 = 98304 bytes: 16323 in packet 0 (after its tags), then 16380 per packet
         data, mosaic = frame_bytes(256, 256, seed=1)
-        assert len(data) == HEADER_SIZE + 6 * 16384
+        assert len(data) == 6 * 16384 + 3 + 81            # packet 0, five full packets, a short last one
+        assert data[16384:16387] == bytes([0x90, 0x90, 1])
         np.testing.assert_array_equal(unpack_mosaic(data, 256, 256), mosaic)
 
     def test_a_frame_shorter_than_a_block_is_a_plain_stream(self):
@@ -41,7 +42,7 @@ class TestUnpackMosaic:
 
     def test_truncated_data_is_zero_padded_not_an_error(self):
         data, mosaic = frame_bytes(64, 32, seed=3)
-        out = unpack_mosaic(data[: HEADER_SIZE + 300], 64, 32)
+        out = unpack_mosaic(data[: 60 + 300], 64, 32)
         assert out.shape == (32, 64)
         assert (out.ravel()[400:] == 0).all()
         np.testing.assert_array_equal(out.ravel()[:100], mosaic.ravel()[:100])

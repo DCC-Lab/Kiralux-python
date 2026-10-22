@@ -16,6 +16,7 @@ from kiralux import KiraluxCameraDevice
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exp", type=int, default=40_000, help="exposure in microseconds")
+    ap.add_argument("--intensity", action="store_true", help="show only the intensity image (S0), large")
     ap.add_argument("--gain", type=int, default=0, help="gain (0..480, tenths of a dB)")
     args = ap.parse_args()
 
@@ -48,7 +49,9 @@ def main():
         ("False color", lambda f: f.falsecolor, None, (None, None)),
     ]
 
-    fig, axs = plt.subplots(2, 4, figsize=(18, 8))
+    if args.intensity:
+        views = views[:1]
+    fig, axs = plt.subplots(*((1, 1) if args.intensity else (2, 4)), figsize=(10, 8) if args.intensity else (18, 8), squeeze=False)
     fig.canvas.manager.set_window_title("Kiralux live preview")
     images = []
     f0 = latest["frame"]
