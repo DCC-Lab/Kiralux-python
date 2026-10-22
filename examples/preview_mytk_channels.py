@@ -8,14 +8,14 @@ DoLP are computed on the same reduced images, in float32.
     python examples/preview_mytk_channels.py --exp 10000
 
 Start/Stop pauses the camera, the slider sets the exposure time (logarithmic, in ms), and
-"Save as..." writes the next N consecutive full-size raw mosaics (uint16, 12-bit values):
-a .tiff or .png is 16 bits, a .npy is a numpy array. With N > 1 the files are numbered
-(name_0001.tiff, name_0002.tiff...). Close the window to stop. Needs myTk:  pip install mytk
+"Save as..." keeps the next N consecutive full-size raw mosaics in a deque, averages them and
+writes the average (float32, in ADU: a 32-bit .tiff or a .npy). Close the window to stop.
+Needs myTk:  pip install mytk
 """
 import argparse
-import os
 import threading
 import time
+from collections import deque
 from tkinter import filedialog
 
 import numpy as np
@@ -29,7 +29,8 @@ LAYOUT = ((0, 0), (0, 1), (1, 0), (1, 1), (0, 2), (1, 2))        # (row, column)
 STEP = 3                                          # show every 3rd pixel: still a view, still no copy
 DARK = 0.1                                        # AoLP is not drawn where S0 is under this fraction of the display scale
 LOG_MS = (-1, 3)                                  # exposure slider: 0.1 ms to 1000 ms, on a log scale
-FILE_TYPES = (("TIFF, 16 bits", "*.tiff"), ("PNG, 16 bits", "*.png"), ("NumPy array", "*.npy"))
+MAX_IMAGES = 100                                  # a raw mosaic is 10 MB: they all wait in memory until averaged
+FILE_TYPES = (("TIFF, 32-bit float", "*.tiff"), ("NumPy array, float32", "*.npy"))
 
 
 def polarization_pictures(views, top):
@@ -44,20 +45,16 @@ def polarization_pictures(views, top):
     return aolp, PILImage.fromarray((dolp * 255).astype(np.uint8))
 
 
-def save_mosaic(mosaic, path):
-    """Write one raw mosaic: a numpy array for .npy, a 16-bit image otherwise."""
+def save_average(mosaics, path):
+    """Average the mosaics (float32, in ADU) and write the result: a numpy array for .npy, a float TIFF otherwise."""
+    average = np.zeros(mosaics[0].shape, np.float32)
+    for mosaic in mosaics:
+        average += mosaic
+    average /= len(mosaics)
     if path.endswith(".npy"):
-        np.save(path, mosaic)
+        np.save(path, average)
     else:
-        PILImage.fromarray(mosaic).save(path)
-
-
-def numbered(path, n, count):
-    """The path itself for a single image, name_0001.ext, name_0002.ext... for several."""
-    if count == 1:
-        return path
-    stem, extension = os.path.splitext(path)
-    return f"{stem}_{n + 1:04d}{extension}"
+        PILImage.fromarray(average).save(path)
 
 
 class ChannelsApp(App):
@@ -70,25 +67,30 @@ class ChannelsApp(App):
         self.pending = False                      # a frame is on its way to the window
         self.wanted = True                        # Start/Stop
         self.exposure_us = exposure_us            # what the slider asks for; the grab thread applies it
-        self.save = None                          # {"path", "count", "mosaics"} while saving
+        self.save = None                          # {"path", "mosaics"} while saving: a deque of the next N frames
         self.message = ""
+
+        # what the controls show and hold, bound to them (changing one changes the other)
+        self.log_exposure = np.log10(exposure_us / 1000)
+        self.exposure_text = f"{exposure_us / 1000:.3g} ms"
+        self.button_text = "Stop"
+        self.images_to_save = 1
+        self.status_text = ""
 
         controls = Box(label="Camera")                  # a column on the left, the pictures on its right
         controls.grid_into(self.window, row=0, column=0, rowspan=4, padx=10, pady=10, sticky="n")
-        self.start_button = Button("Stop", user_event_callback=self.toggle)
+        self.start_button = Button(self.button_text, user_event_callback=self.toggle)
         self.start_button.grid_into(controls, row=0, column=0, padx=10, pady=(10, 5))
         Label("Exposure").grid_into(controls, row=1, column=0, padx=10, pady=(15, 0))
-        self.exposure_label = Label(f"{exposure_us / 1000:g} ms")
-        self.exposure_label.grid_into(controls, row=2, column=0, padx=10)
-        self.slider = Slider(value=np.log10(exposure_us / 1000), minimum=LOG_MS[0], maximum=LOG_MS[1], width=160)
-        self.slider.value_variable.trace_add("write", self.exposure_moved)    # the delegate only hears programmatic changes, not the mouse
+        exposure_label = Label(self.exposure_text)
+        exposure_label.grid_into(controls, row=2, column=0, padx=10)
+        self.slider = Slider(value=self.log_exposure, minimum=LOG_MS[0], maximum=LOG_MS[1], width=160)
         self.slider.grid_into(controls, row=3, column=0, padx=10, pady=5)
         Label("Save").grid_into(controls, row=4, column=0, padx=10, pady=(15, 0))
-        self.count = IntEntry(value=1, minimum=1, maximum=1000, width=6)
-        self.count.grid_into(controls, row=5, column=0, padx=10)
-        Label("images").grid_into(controls, row=6, column=0, padx=10)
-        self.save_button = Button("Save as...", user_event_callback=self.ask_where)
-        self.save_button.grid_into(controls, row=7, column=0, padx=10, pady=(5, 10))
+        count = IntEntry(value=self.images_to_save, minimum=1, maximum=MAX_IMAGES, width=6)
+        count.grid_into(controls, row=5, column=0, padx=10)
+        Label("images (averaged)").grid_into(controls, row=6, column=0, padx=10)
+        Button("Save as...", user_event_callback=self.ask_where).grid_into(controls, row=7, column=0, padx=10, pady=(5, 10))
 
         blank = PILImage.new("L", (1224 // STEP, 1024 // STEP))
         self.images = []
@@ -98,8 +100,15 @@ class ChannelsApp(App):
             image.grid_into(self.window, row=2 * row + 1, column=column + 1, padx=5, pady=5)
             self.images.append(image)
 
-        self.status = Label("")
-        self.status.grid_into(self.window, row=4, column=0, columnspan=4, pady=(0, 10))
+        status = Label("")
+        status.grid_into(self.window, row=4, column=0, columnspan=4, pady=(0, 10))
+
+        self.bind_property_to_widget_value("log_exposure", self.slider)
+        self.bind_property_to_widget_value("exposure_text", exposure_label)
+        self.bind_property_to_widget_value("button_text", self.start_button)
+        self.bind_property_to_widget_value("images_to_save", count)
+        self.bind_property_to_widget_value("status_text", status)
+        self.add_observer(self, "log_exposure")
 
         self.grabber = threading.Thread(target=self.grab, daemon=True)
         self.grabber.start()
@@ -107,27 +116,29 @@ class ChannelsApp(App):
     # -- window side: ask, never touch the camera ----------------------------- #
     def toggle(self, event, button):
         self.wanted = not self.wanted
-        button.label = "Stop" if self.wanted else "Start"
+        self.button_text = "Stop" if self.wanted else "Start"
 
-    def exposure_moved(self, *trace):
-        """The exposure slider moved; its value is log10 of the exposure in ms."""
-        milliseconds = 10 ** self.slider.value
-        self.exposure_label.text = f"{milliseconds:.3g} ms"
-        self.exposure_us = max(1, round(1000 * milliseconds))
+    def observed_property_changed(self, observed_object, observed_property_name, new_value, context):
+        """The exposure slider moved (log10 of the exposure in ms), by the mouse or by the program."""
+        if observed_property_name == "log_exposure":
+            milliseconds = 10 ** new_value
+            self.exposure_text = f"{milliseconds:.3g} ms"
+            self.exposure_us = max(1, round(1000 * milliseconds))
+        super().observed_property_changed(observed_object, observed_property_name, new_value, context)
 
     def ask_where(self, event, button):
-        path = filedialog.asksaveasfilename(parent=self.window.widget, title="Save raw mosaics",
+        path = filedialog.asksaveasfilename(parent=self.window.widget, title="Save the average of the next images",
                                             defaultextension=".tiff", filetypes=FILE_TYPES)
         if path and self.save is None:
             self.wanted = True                    # the images come from the stream
-            self.start_button.label = "Stop"
-            self.save = {"path": path, "count": self.count.value, "mosaics": []}
+            self.button_text = "Stop"
+            self.save = {"path": path, "mosaics": deque(maxlen=self.images_to_save)}
 
     def show(self, pictures, text):
         for image, picture in zip(self.images, pictures):
             image.pil_image = picture
             image.update_display()
-        self.status.text = text
+        self.status_text = text
         self.pending = False
 
     # -- grab thread: the only one talking to the camera ---------------------- #
@@ -166,14 +177,14 @@ class ChannelsApp(App):
             self.schedule_on_main_thread(self.show, args=[pictures, text])
 
     def collect(self, mosaic):
-        """Keep the next frames of the stream; write them all when there are enough."""
+        """Keep the next frames of the stream in the deque; average and write them when it is full."""
         request = self.save
-        request["mosaics"].append(mosaic)
-        self.message = f"saving {len(request['mosaics'])}/{request['count']}"
-        if len(request["mosaics"]) == request["count"]:
-            for n, saved in enumerate(request["mosaics"]):
-                save_mosaic(saved, numbered(request["path"], n, request["count"]))
-            self.message = f"saved {request['count']} image(s) to {request['path']}"
+        mosaics = request["mosaics"]
+        mosaics.append(mosaic)
+        self.message = f"saving {len(mosaics)}/{mosaics.maxlen}"
+        if len(mosaics) == mosaics.maxlen:
+            save_average(mosaics, request["path"])
+            self.message = f"saved the average of {len(mosaics)} image(s) to {request['path']}"
             self.save = None
 
     def stop(self):
