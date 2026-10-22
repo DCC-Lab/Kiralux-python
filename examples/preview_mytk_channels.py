@@ -78,10 +78,10 @@ class ChannelsApp(App):
         self.start_button = Button("Stop", user_event_callback=self.toggle)
         self.start_button.grid_into(controls, row=0, column=0, padx=10, pady=(10, 5))
         Label("Exposure").grid_into(controls, row=1, column=0, padx=10, pady=(15, 0))
-        self.exposure_label = Label(f"{exposure_us / 1000:g} ms")      # before the slider, which reports its first value
+        self.exposure_label = Label(f"{exposure_us / 1000:g} ms")
         self.exposure_label.grid_into(controls, row=2, column=0, padx=10)
-        self.slider = Slider(value=np.log10(exposure_us / 1000), minimum=LOG_MS[0], maximum=LOG_MS[1],
-                             width=160, delegate=self)
+        self.slider = Slider(value=np.log10(exposure_us / 1000), minimum=LOG_MS[0], maximum=LOG_MS[1], width=160)
+        self.slider.value_variable.trace_add("write", self.exposure_moved)    # the delegate only hears programmatic changes, not the mouse
         self.slider.grid_into(controls, row=3, column=0, padx=10, pady=5)
         Label("Save").grid_into(controls, row=4, column=0, padx=10, pady=(15, 0))
         self.count = IntEntry(value=1, minimum=1, maximum=1000, width=6)
@@ -109,9 +109,9 @@ class ChannelsApp(App):
         self.wanted = not self.wanted
         button.label = "Stop" if self.wanted else "Start"
 
-    def value_updated(self, object, value):
-        """The exposure slider moved (value is log10 of the exposure in ms)."""
-        milliseconds = 10 ** value
+    def exposure_moved(self, *trace):
+        """The exposure slider moved; its value is log10 of the exposure in ms."""
+        milliseconds = 10 ** self.slider.value
         self.exposure_label.text = f"{milliseconds:.3g} ms"
         self.exposure_us = max(1, round(1000 * milliseconds))
 
