@@ -20,7 +20,7 @@ from tkinter import filedialog
 
 import numpy as np
 from PIL import Image as PILImage
-from mytk import App, Button, Image, IntEntry, Label, Slider
+from mytk import App, Box, Button, Image, IntEntry, Label, Slider
 
 from kiralux import KiraluxCameraDevice
 
@@ -73,30 +73,33 @@ class ChannelsApp(App):
         self.save = None                          # {"path", "count", "mosaics"} while saving
         self.message = ""
 
+        controls = Box(label="Camera")                  # a column on the left, the pictures on its right
+        controls.grid_into(self.window, row=0, column=0, rowspan=4, padx=10, pady=10, sticky="n")
+        self.start_button = Button("Stop", user_event_callback=self.toggle)
+        self.start_button.grid_into(controls, row=0, column=0, padx=10, pady=(10, 5))
+        Label("Exposure").grid_into(controls, row=1, column=0, padx=10, pady=(15, 0))
+        self.exposure_label = Label(f"{exposure_us / 1000:g} ms")      # before the slider, which reports its first value
+        self.exposure_label.grid_into(controls, row=2, column=0, padx=10)
+        self.slider = Slider(value=np.log10(exposure_us / 1000), minimum=LOG_MS[0], maximum=LOG_MS[1],
+                             width=160, delegate=self)
+        self.slider.grid_into(controls, row=3, column=0, padx=10, pady=5)
+        Label("Save").grid_into(controls, row=4, column=0, padx=10, pady=(15, 0))
+        self.count = IntEntry(value=1, minimum=1, maximum=1000, width=6)
+        self.count.grid_into(controls, row=5, column=0, padx=10)
+        Label("images").grid_into(controls, row=6, column=0, padx=10)
+        self.save_button = Button("Save as...", user_event_callback=self.ask_where)
+        self.save_button.grid_into(controls, row=7, column=0, padx=10, pady=(5, 10))
+
         blank = PILImage.new("L", (1224 // STEP, 1024 // STEP))
         self.images = []
         for name, (row, column) in zip(NAMES, LAYOUT):
-            Label(name).grid_into(self.window, row=2 * row, column=column, pady=(10, 0))
+            Label(name).grid_into(self.window, row=2 * row, column=column + 1, pady=(10, 0))
             image = Image(pil_image=blank)
-            image.grid_into(self.window, row=2 * row + 1, column=column, padx=5, pady=5)
+            image.grid_into(self.window, row=2 * row + 1, column=column + 1, padx=5, pady=5)
             self.images.append(image)
 
-        self.start_button = Button("Stop", user_event_callback=self.toggle)
-        self.start_button.grid_into(self.window, row=4, column=0, padx=5, pady=5)
-        self.exposure_label = Label(f"{exposure_us / 1000:g} ms")      # before the slider, which reports its first value
-        self.exposure_label.grid_into(self.window, row=4, column=2, padx=5, pady=5)
-        self.slider = Slider(value=np.log10(exposure_us / 1000), minimum=LOG_MS[0], maximum=LOG_MS[1],
-                             width=300, delegate=self)
-        self.slider.grid_into(self.window, row=4, column=1, padx=5, pady=5)
-
-        self.save_button = Button("Save as...", user_event_callback=self.ask_where)
-        self.save_button.grid_into(self.window, row=5, column=0, padx=5, pady=5)
-        self.count = IntEntry(value=1, minimum=1, maximum=1000, width=6)
-        self.count.grid_into(self.window, row=5, column=1, padx=5, pady=5)
-        Label("images").grid_into(self.window, row=5, column=2, padx=5, pady=5)
-
         self.status = Label("")
-        self.status.grid_into(self.window, row=6, column=0, columnspan=3, pady=(0, 10))
+        self.status.grid_into(self.window, row=4, column=0, columnspan=4, pady=(0, 10))
 
         self.grabber = threading.Thread(target=self.grab, daemon=True)
         self.grabber.start()
