@@ -14,7 +14,10 @@ from kiralux.device import PROTOCOL_PATH
 pytestmark = pytest.mark.hardware
 
 
-@pytest.fixture(scope="module")
+# Function-scoped so the interface is released between tests: a USB interface can
+# only be claimed by one handle at a time, and some tests below open their own
+# connection (Kiralux, KiraluxDevice) to the same camera.
+@pytest.fixture
 def cam():
     with KiraluxCameraDevice() as c:
         c.exposure_us, c.binning, c.roi = 20_000, (1, 1), (0, 0, 2447, 2047)
@@ -23,7 +26,9 @@ def cam():
 
 def test_a_camera_is_listed():
     serials = KiraluxCameraDevice.available()
-    assert len(serials) >= 1 and all(s is None or s.isdigit() for s in serials)
+    # available() reports the USB descriptor serial, which on this camera is a
+    # vendor placeholder ("000000000AAA") -- not the logical serial from sernum.
+    assert len(serials) >= 1 and all(s is None or s.strip() for s in serials)
 
 
 def test_firmware_vocabulary_matches_the_Command_enum(cam):
