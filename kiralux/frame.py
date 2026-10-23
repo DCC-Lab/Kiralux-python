@@ -11,37 +11,53 @@ from functools import cached_property
 
 import numpy as np
 
-# Image framing on endpoint 0x83: a 16384-byte header, then 12-bit packed pixels
-# in 16384-byte blocks. 12-bit triplets do NOT cross a block boundary, so each
-# block holds 16383 "main" bytes + 1 "tail" byte.
-HEADER_SIZE = 16384
-BLOCK_SIZE = 16384
-BLOCK_MAIN = BLOCK_SIZE - 1
+# Image framing on endpoint 0x83: the stream is a sequence of 16384-byte packets.
+#
+#   packet 0  : 0x90 0x90 <seq16> | tag list (TSI, FCNT, PCKH, PCKL, IFMT, IOFF, ENDT;
+#               8 bytes each) | pixels, up to the end of the packet
+#   packet n  : 0x90 0x90 <seq16> | 16380 bytes of pixels
+#
+# Once the headers are stripped (60 bytes on packet 0, 4 on the others) the pixels are
+# one continuous 12-bit packed stream: a triplet may straddle two packets, and the last
+# byte of a packet is pixel data (not padding).
+HEADER_SIZE = 16384                  # packet 0 (tags + first pixels)
+BLOCK_SIZE = 16384                   # every packet
+PACKET_HEADER = 4
+PACKET_DATA = BLOCK_SIZE - PACKET_HEADER
+TAG_SIZE = 8
+END_TAG = b"ENDT"
+FRAME_HEADER = 60                    # packet 0: magic (4) + seven 8-byte tags
+FRAME_START = b"\x90\x90\x00\x00TSI\x00"   # how packet 0 of a frame begins (packet 0, then the first tag)
+
+
+def stream_size(width: int, height: int) -> int:
+    """Bytes the camera streams for one frame: whole packets, headers included."""
+    need = width * height * 3 // 2
+    first = BLOCK_SIZE - FRAME_HEADER
+    return BLOCK_SIZE * (1 + max(0, -(-(need - first) // PACKET_DATA)))
+
+
+def triplets(raw: np.ndarray) -> np.ndarray:
+    """Unpack 12-bit Mono12p bytes (2 pixels per 3 bytes) into uint16 pixels."""
+    b = raw[: raw.size // 3 * 3].reshape(-1, 3).astype(np.uint16)
+    out = np.empty(b.shape[0] * 2, np.uint16)
+    out[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
+    out[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
+    return out
 
 
 def unpack_mosaic(data: bytes, width: int, height: int) -> np.ndarray:
     """Unpack a 12-bit Mono12p frame into a (height, width) uint16 mosaic.
 
-    Triplets do not cross the 16384-byte block boundaries; each block holds 16383
-    "main" bytes plus one "tail" byte, and the tail bytes (concatenated) form the
-    final pixels of the image.
+    Packet 0 carries a tag list followed by the first pixels; the other packets carry
+    a 4-byte header followed by pixels. Missing pixels are zero-padded.
     """
-    body = memoryview(data)[HEADER_SIZE:]
-    n = len(body) // BLOCK_SIZE
-    blocks = np.frombuffer(body[: n * BLOCK_SIZE], np.uint8).reshape(n, BLOCK_SIZE)
-
-    def triplets(raw: np.ndarray) -> np.ndarray:
-        b = raw.reshape(-1, 3).astype(np.uint16)
-        out = np.empty(b.shape[0] * 2, np.uint16)
-        out[0::2] = b[:, 0] | ((b[:, 1] & 0x0F) << 8)
-        out[1::2] = (b[:, 1] >> 4) | (b[:, 2] << 4)
-        return out
-
-    main = triplets(blocks[:, :BLOCK_MAIN])
-    tail = np.concatenate([blocks[:, BLOCK_MAIN], np.frombuffer(body[n * BLOCK_SIZE:], np.uint8)])
-    extra = triplets(tail[: len(tail) // 3 * 3]) if len(tail) >= 3 else main[:0]
-
-    pixels = np.concatenate([main, extra])
+    raw = np.frombuffer(data, np.uint8)
+    tags_end = bytes(raw[:BLOCK_SIZE]).find(END_TAG)
+    start = tags_end + TAG_SIZE if tags_end >= 0 else PACKET_HEADER
+    payload = [raw[start:BLOCK_SIZE]] + [raw[offset + PACKET_HEADER: offset + BLOCK_SIZE]
+                                         for offset in range(BLOCK_SIZE, raw.size, BLOCK_SIZE)]
+    pixels = triplets(np.concatenate(payload))
     need = width * height
     if pixels.size < need:
         pixels = np.concatenate([pixels, np.zeros(need - pixels.size, np.uint16)])
@@ -83,11 +99,20 @@ class PolarFrame:
         return self.mosaic.shape
 
     @cached_property
-    def channels(self):
-        """The four analyser images (I0, I45, I90, I135), half-resolution."""
+    def raw_channels(self):
+        """The four analyser images (I0, I45, I90, I135) as uint16 views of the mosaic.
+
+        Half-resolution, with a stride of 2 in each direction: no copy, no conversion,
+        they share the mosaic's memory (and are overwritten if it is).
+        """
         m = self.mosaic
-        m = m[: m.shape[0] & ~1, : m.shape[1] & ~1].astype(np.float32)
+        m = m[: m.shape[0] & ~1, : m.shape[1] & ~1]
         return (m[1::2, 1::2], m[0::2, 1::2], m[0::2, 0::2], m[1::2, 0::2])
+
+    @cached_property
+    def channels(self):
+        """The four analyser images (I0, I45, I90, I135), half-resolution, as float32."""
+        return tuple(c.astype(np.float32) for c in self.raw_channels)
 
     @cached_property
     def stokes(self):

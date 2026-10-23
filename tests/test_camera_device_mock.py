@@ -146,6 +146,67 @@ class TestProperties:
 
 
 # --------------------------------------------------------------------------- #
+#  continuous acquisition
+# --------------------------------------------------------------------------- #
+class TestStreaming:
+    def test_start_arms_once_in_continuous_mode(self, mock_camera, port):
+        del port.sent[:]
+        mock_camera.startStreaming()
+        assert port.sent == ["stop", "hwtrig none", "nframes 0", "image_width", "image_height",
+                             "exp", "arm", "start"]
+        assert mock_camera.streaming
+
+    def test_frames_follow_without_any_command(self, mock_camera, port, frame):
+        mock_camera.startStreaming()
+        del port.sent[:]
+        for _ in range(3):
+            np.testing.assert_array_equal(np.asarray(mock_camera.snap()), frame[1])
+        assert port.sent == []
+
+    def test_reads_are_big_chunks_of_whole_packets(self, mock_camera, port):
+        mock_camera.startStreaming()
+        mock_camera.snap()
+        assert {c["length"] for c in port.stream_calls} == {camera_device.STREAM_CHUNK}
+        assert camera_device.STREAM_CHUNK % camera_device.BLOCK_SIZE == 0
+
+    def test_a_stream_that_starts_mid_frame_resynchronises(self, mock_camera, port, frame):
+        port.image = b"\x12\x34" * 50_001 + port.image          # stale leftover, not packet aligned
+        mock_camera.startStreaming()
+        np.testing.assert_array_equal(np.asarray(mock_camera.snap()), frame[1])
+
+    def test_exposure_and_gain_re_arm_a_running_stream(self, mock_camera, port):
+        mock_camera.startStreaming()
+        del port.sent[:]
+        mock_camera.exposure_us = 5000
+        assert port.sent[0] == "exp 5000" and port.sent[-2:] == ["arm", "start"]
+        del port.sent[:]
+        mock_camera.gain_db = 3
+        assert port.sent[0] == "gain 3" and port.sent[-2:] == ["arm", "start"]
+
+    def test_stop_stops_and_returns_to_single_shot(self, mock_camera, port, frame):
+        mock_camera.startStreaming()
+        mock_camera.snap()
+        mock_camera.stopStreaming()
+        assert not mock_camera.streaming and port.sent[-1] == "stop"
+        del port.sent[:]
+        np.testing.assert_array_equal(np.asarray(mock_camera.snap()), frame[1])
+        assert port.sent[:3] == ["stop", "hwtrig none", "nframes 1"]
+
+    def test_shutdown_stops_a_running_stream(self, mock_camera, port):
+        mock_camera.startStreaming()
+        del port.sent[:]
+        mock_camera.shutdownDevice()
+        assert port.sent == ["stop"]
+
+    def test_a_failed_read_stops_the_stream_and_raises(self, mock_camera, port, monkeypatch):
+        mock_camera.startStreaming()
+        monkeypatch.setattr(port, "readStream", lambda *a, **k: (_ for _ in ()).throw(TimeoutError()))
+        with pytest.raises(TimeoutError):
+            mock_camera.snap()
+        assert not mock_camera.streaming and port.sent[-1] == "stop"
+
+
+# --------------------------------------------------------------------------- #
 #  acquisition
 # --------------------------------------------------------------------------- #
 class TestAcquisition:
@@ -158,7 +219,37 @@ class TestAcquisition:
         del port.sent[:]
         mock_camera.snap()
         assert port.sent == ["stop", "hwtrig none", "nframes 1", "image_width", "image_height",
-                             "arm", "start", "stop"]
+                             "arm", "start"]
+
+    def test_the_following_snaps_only_arm_and_start(self, mock_camera, port):
+        mock_camera.snap()
+        del port.sent[:]
+        mock_camera.snap()
+        assert port.sent == ["arm", "start"]
+
+    @pytest.mark.parametrize("change", [
+        lambda cam: setattr(cam, "roi", (0, 0, 99, 99)),
+        lambda cam: setattr(cam, "binning", (1, 1)),
+        lambda cam: setattr(cam, "frame_count", 2)])
+    def test_changing_the_geometry_or_frame_count_sets_the_mode_up_again(self, mock_camera, port, change):
+        mock_camera.snap()
+        change(mock_camera)
+        del port.sent[:]
+        mock_camera.snap()
+        assert port.sent[:3] == ["stop", "hwtrig none", "nframes 1"]
+
+    def test_shutdown_stops_a_camera_left_armed(self, mock_camera, port):
+        mock_camera.snap()
+        del port.sent[:]
+        mock_camera.shutdownDevice()
+        assert port.sent == ["stop"]
+
+    def test_a_failed_read_stops_drains_and_sets_up_again(self, mock_camera, port, monkeypatch):
+        mock_camera.snap()
+        monkeypatch.setattr(port, "readStream", lambda *a, **k: (_ for _ in ()).throw(TimeoutError()))
+        with pytest.raises(TimeoutError):
+            mock_camera.snap()
+        assert mock_camera.frame_size is None and port.sent[-1] == "stop"
 
     def test_snap_reads_header_plus_packed_pixels_from_the_image_endpoint(self, mock_camera, port):
         mock_camera.snap()
@@ -198,3 +289,18 @@ class TestAcquisition:
     def test_shutdown_while_not_capturing_is_harmless(self, mock_camera):
         assert not mock_camera.isCapturing
         mock_camera.shutdownDevice()
+
+
+class TestDrainImageEndpoint:
+    def test_stops_when_the_pipe_is_empty(self):
+        from kiralux.camera_device import drain_image_endpoint
+        port = FakeCameraPort()                          # not streaming: every read times out
+        drain_image_endpoint(port, 0x83)
+        assert port.stream_calls == []
+
+    def test_is_bounded_when_the_pipe_never_empties(self):
+        from kiralux.camera_device import drain_image_endpoint
+        port = FakeCameraPort(image=bytes(16384))
+        port.streaming = True
+        drain_image_endpoint(port, 0x83, limit=5)
+        assert len(port.stream_calls) == 5

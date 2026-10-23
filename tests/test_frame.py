@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, HEADER_SIZE
+from kiralux.frame import PolarFrame, unpack_mosaic, hsv_to_rgb, stream_size, HEADER_SIZE, END_TAG, TAG_SIZE, FRAME_START
 
 from support import pack_mosaic, frame_bytes, mosaic_from_channels
 
@@ -17,7 +17,7 @@ REAL_CAPTURE = os.path.join(os.path.dirname(__file__), "..", "protocol-analysis"
 class TestUnpackMosaic:
     def test_a_triplet_holds_two_12_bit_pixels(self):
         # known answer, worked by hand: AB CD EF -> 0xDAB, 0xEFC
-        data = bytes(HEADER_SIZE) + bytes([0xAB, 0xCD, 0xEF])
+        data = bytes(52) + END_TAG + bytes(TAG_SIZE - len(END_TAG)) + bytes([0xAB, 0xCD, 0xEF])
         assert unpack_mosaic(data, 2, 1).tolist() == [[0xDAB, 0xEFC]]
 
     def test_full_size_frame_round_trips(self, frame):
@@ -29,11 +29,21 @@ class TestUnpackMosaic:
     def test_pixels_never_exceed_12_bits(self, frame):
         assert unpack_mosaic(frame[0], 2448, 2048).max() <= 4095
 
-    def test_blocks_tail_bytes_form_the_last_pixels(self):
-        # 256x256 is exactly 6 blocks: 6*16383 main bytes, and 6 tail bytes = 4 pixels
+    def test_every_packet_gives_up_four_bytes_to_its_header(self):
+        # 256x256 = 98304 bytes: 16324 in packet 0 (after its tags), then 16380 per packet
         data, mosaic = frame_bytes(256, 256, seed=1)
-        assert len(data) == HEADER_SIZE + 6 * 16384
+        assert len(data) == 6 * 16384 + 4 + 80            # packet 0, five full packets, a short last one
+        assert data[16384:16388] == bytes([0x90, 0x90, 1, 0])
         np.testing.assert_array_equal(unpack_mosaic(data, 256, 256), mosaic)
+
+    def test_the_last_byte_of_a_packet_is_pixel_data(self):
+        # 16324 bytes after the tags is not a multiple of 3: a triplet straddles packets 0 and 1
+        data, mosaic = frame_bytes(256, 256, seed=5)
+        assert 16324 % 3 == 1
+        out = unpack_mosaic(data, 256, 256).ravel()
+        first_of_packet_1 = (16324 // 3 + 1) * 2 - 1       # the second pixel of the straddling triplet
+        np.testing.assert_array_equal(out[first_of_packet_1 - 2: first_of_packet_1 + 3],
+                                      mosaic.ravel()[first_of_packet_1 - 2: first_of_packet_1 + 3])
 
     def test_a_frame_shorter_than_a_block_is_a_plain_stream(self):
         data, mosaic = frame_bytes(64, 32, seed=2)
@@ -41,7 +51,7 @@ class TestUnpackMosaic:
 
     def test_truncated_data_is_zero_padded_not_an_error(self):
         data, mosaic = frame_bytes(64, 32, seed=3)
-        out = unpack_mosaic(data[: HEADER_SIZE + 300], 64, 32)
+        out = unpack_mosaic(data[: 60 + 300], 64, 32)
         assert out.shape == (32, 64)
         assert (out.ravel()[400:] == 0).all()
         np.testing.assert_array_equal(out.ravel()[:100], mosaic.ravel()[:100])
@@ -58,6 +68,20 @@ class TestUnpackMosaic:
         assert m.max() <= 4095
         # same-polarizer neighbours (two rows apart) agree in a real image; scrambled bits would not
         assert np.median(np.abs(m[2:] - m[:-2])) < 200
+
+
+class TestStreamSize:
+    def test_a_full_frame_is_460_packets(self):
+        assert stream_size(2448, 2048) == 460 * 16384
+
+    @pytest.mark.parametrize("width, height", [(64, 32), (256, 256), (2448, 2048), (612, 512)])
+    def test_it_is_the_whole_packets_that_hold_the_frame(self, width, height):
+        data = frame_bytes(width, height)[0]
+        size = stream_size(width, height)
+        assert size % 16384 == 0 and size - 16384 < len(data) <= size
+
+    def test_a_frame_starts_with_the_magic_and_the_first_tag(self):
+        assert frame_bytes(64, 32)[0][:8] == FRAME_START
 
 
 def test_pack_then_unpack_is_the_identity_on_odd_pixel_counts():
@@ -171,3 +195,25 @@ class TestPolarFrame:
         assert (fc[..., 0] == 0).all()                        # cyan: no red
         assert fc[0, -1, 1] > fc[0, 0, 1]                     # value follows S0
         assert (fc[..., 1] == fc[..., 2]).all()               # fully polarized: G == B
+
+
+class TestRawChannels:
+    def test_are_uint16_views_of_the_mosaic_without_a_copy(self):
+        mosaic = np.arange(8 * 6, dtype=np.uint16).reshape(8, 6)
+        frame = PolarFrame(mosaic)
+        for channel in frame.raw_channels:
+            assert channel.dtype == np.uint16 and channel.shape == (4, 3)
+            assert np.shares_memory(channel, mosaic)
+
+    def test_follow_the_sensor_layout_90_45_135_0(self):
+        # super-pixel [ 90  45 / 135  0 ]
+        frame = PolarFrame(np.array([[90, 45], [135, 0]], np.uint16))
+        i0, i45, i90, i135 = (c[0, 0] for c in frame.raw_channels)
+        assert (i0, i45, i90, i135) == (0, 45, 90, 135)
+
+    def test_float_channels_hold_the_same_values(self):
+        mosaic = np.random.default_rng(5).integers(0, 4096, (16, 12), dtype=np.uint16)
+        frame = PolarFrame(mosaic)
+        for raw, converted in zip(frame.raw_channels, frame.channels):
+            assert converted.dtype == np.float32
+            np.testing.assert_array_equal(converted, raw)
