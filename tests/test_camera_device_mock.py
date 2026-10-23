@@ -207,6 +207,49 @@ class TestStreaming:
 
 
 # --------------------------------------------------------------------------- #
+#  the selectable stream
+# --------------------------------------------------------------------------- #
+class TestSelectedStream:
+    def test_the_default_is_the_whole_polarframe(self, mock_camera):
+        assert mock_camera.stream == "frame"
+        assert isinstance(mock_camera.snap(), PolarFrame)
+
+    @pytest.mark.parametrize("name, index", [("I0", 0), ("I45", 1), ("I90", 2), ("I135", 3)])
+    def test_a_channel_is_a_plain_half_size_uint16_image(self, mock_camera, frame, name, index):
+        mock_camera.stream = name
+        image = mock_camera.snap()
+        assert type(image) is np.ndarray and image.dtype == np.uint16
+        assert image.shape == (HEIGHT // 2, WIDTH // 2)
+        np.testing.assert_array_equal(image, PolarFrame(frame[1]).raw_channels[index])
+
+    def test_the_mosaic_is_the_full_size_image(self, mock_camera, frame):
+        mock_camera.stream = "mosaic"
+        np.testing.assert_array_equal(mock_camera.snap(), frame[1])
+
+    @pytest.mark.parametrize("name", ["S0", "DoLP", "AoLP"])
+    def test_derived_images_are_float32(self, mock_camera, name):
+        mock_camera.stream = name
+        image = mock_camera.snap()
+        assert image.dtype == np.float32 and image.shape == (HEIGHT // 2, WIDTH // 2)
+
+    def test_the_continuous_stream_delivers_the_selected_image_and_can_change_on_the_fly(self, mock_camera, frame):
+        mock_camera.stream = "I90"
+        mock_camera.startStreaming()
+        np.testing.assert_array_equal(mock_camera.snap(), PolarFrame(frame[1]).raw_channels[2])
+        mock_camera.stream = "I0"
+        np.testing.assert_array_equal(mock_camera.snap(), PolarFrame(frame[1]).raw_channels[0])
+
+    def test_the_capture_loop_gets_the_selected_image(self, mock_camera):
+        mock_camera.stream = "I45"
+        assert all(f.shape == (HEIGHT // 2, WIDTH // 2) for f in mock_camera.captureFrames(2))
+
+    def test_an_unknown_stream_is_refused(self, mock_camera):
+        with pytest.raises(ValueError):
+            mock_camera.stream = "I60"
+        assert mock_camera.stream == "frame"
+
+
+# --------------------------------------------------------------------------- #
 #  acquisition
 # --------------------------------------------------------------------------- #
 class TestAcquisition:

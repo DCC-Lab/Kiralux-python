@@ -33,7 +33,7 @@ import numpy as np
 from hardwarelibrary.cameras.camera import CameraDevice
 from hardwarelibrary.communication.protocol import CommandDictionary
 
-from .frame import PolarFrame, unpack_mosaic, stream_size, HEADER_SIZE, BLOCK_SIZE, FRAME_START
+from .frame import PolarFrame, IMAGES, unpack_mosaic, stream_size, HEADER_SIZE, BLOCK_SIZE, FRAME_START
 from .device import KiraluxPort, PROTOCOL_PATH
 from .capabilities import (
     ExposureCapability,
@@ -52,6 +52,7 @@ from .capabilities import (
 VID, PID = 0x1313, 0x4001
 EP_COMMAND, EP_RESPONSE, EP_IMAGE = 0x02, 0x82, 0x83
 COMMAND_SIZE = 1024
+STREAMS = ("frame",) + IMAGES       # what a capture delivers: the PolarFrame itself, or one 2D image of it
 STREAM_CHUNK = 4 * 1024 * 1024    # bytes per read while streaming (whole packets); 16 KB reads top out near 70 MB/s
 
 
@@ -141,7 +142,28 @@ class KiraluxCameraDevice(CameraDevice,
         self.port = port   # None -> real KiraluxPort; inject a ProtocolDebugPort to mock
         self.frame_size = None   # (width, height) once the single-shot mode is set up; None = set it up again
         self.streaming = False   # continuous acquisition: armed once, frames keep coming
-        self.stream = bytearray()
+        self.buffer = bytearray()
+        self._stream = "frame"
+
+    @property
+    def stream(self) -> str:
+        """What ``snap()`` and the capture loop deliver, one of :data:`STREAMS`.
+
+        ``"frame"`` (the default) is the whole :class:`PolarFrame`. Any other name is a single
+        2D numpy image of it, so the camera can be used like a standard camera: ``"I0"``, ``"I45"``,
+        ``"I90"``, ``"I135"`` (uint16, half size), ``"S0"``, ``"DoLP"``, ``"AoLP"`` (float32, half
+        size) or ``"mosaic"`` (uint16, full size). Software only: it can change while streaming.
+        """
+        return self._stream
+
+    @stream.setter
+    def stream(self, name: str):
+        if name not in STREAMS:
+            raise ValueError(f"unknown stream {name!r}: choose one of {STREAMS}")
+        self._stream = name
+
+    def selected(self, frame: PolarFrame):
+        return frame if self._stream == "frame" else frame.image(self._stream)
 
     @staticmethod
     def available() -> list[str]:
@@ -332,8 +354,8 @@ class KiraluxCameraDevice(CameraDevice,
         return self.polar_phase
 
     # -- acquisition -------------------------------------------------------- #
-    def doCaptureFrame(self) -> PolarFrame:
-        """Acquire one software-triggered frame as a :class:`PolarFrame`.
+    def doCaptureFrame(self):
+        """Acquire one software-triggered frame, as a :class:`PolarFrame` or the image picked by :attr:`stream`.
 
         The CameraDevice capture loop (``captureFrames``/``start``) calls this. The
         single-shot mode is set up on the first frame only, and no ``STOP`` is sent
@@ -358,7 +380,7 @@ class KiraluxCameraDevice(CameraDevice,
             drain_image_endpoint(self.port, self.imageEndPoint)
             self.frame_size = None
             raise
-        return PolarFrame(unpack_mosaic(bytes(raw), width, height))
+        return self.selected(PolarFrame(unpack_mosaic(bytes(raw), width, height)))
 
     # -- continuous acquisition ---------------------------------------------- #
     def startStreaming(self):
@@ -373,7 +395,7 @@ class KiraluxCameraDevice(CameraDevice,
         self.performTransaction("NFRAMES_SET", nframes=0)         # 0: unlimited frames per trigger
         self.stream_shape = self.sensor_size
         self.stream_timeout = 4000 + self.exposure_us // 1000     # ms: a frame cannot come faster than its exposure
-        self.stream = bytearray()
+        self.buffer = bytearray()
         self.frame_size = None                                    # single-shot mode is no longer set up
         self.performTransaction("ARM")
         self.performTransaction("START")
@@ -382,7 +404,7 @@ class KiraluxCameraDevice(CameraDevice,
     def stopStreaming(self):
         """Stop the stream and empty the image pipe (a half-full pipe leaves the next capture shifted)."""
         self.streaming = False
-        self.stream = bytearray()
+        self.buffer = bytearray()
         self.performTransaction("STOP")
         drain_image_endpoint(self.port, self.imageEndPoint, limit=2048)
 
@@ -392,11 +414,11 @@ class KiraluxCameraDevice(CameraDevice,
             self.stopStreaming()                 # also empties the pipe: no frame with the old setting follows
             self.startStreaming()
 
-    def nextFrame(self) -> PolarFrame:
+    def nextFrame(self):
         """The next complete frame of the stream, resynchronising on the packet 0 header if needed."""
         width, height = self.stream_shape
         size = stream_size(width, height)
-        buffer = self.stream
+        buffer = self.buffer
         try:
             while True:
                 start = buffer.find(FRAME_START)
@@ -405,7 +427,7 @@ class KiraluxCameraDevice(CameraDevice,
                     if len(buffer) >= size:
                         frame = bytes(buffer[:size])
                         del buffer[:size]
-                        return PolarFrame(unpack_mosaic(frame, width, height))
+                        return self.selected(PolarFrame(unpack_mosaic(frame, width, height)))
                 else:
                     del buffer[:max(0, len(buffer) - len(FRAME_START) + 1)]   # keep a start split across reads
                 buffer += self.port.readStream(STREAM_CHUNK, endPoint=self.imageEndPoint,
@@ -414,8 +436,8 @@ class KiraluxCameraDevice(CameraDevice,
             self.stopStreaming()
             raise
 
-    def snap(self, exposure_us: Optional[int] = None) -> PolarFrame:
-        """Convenience: optionally set the exposure, then capture one frame."""
+    def snap(self, exposure_us: Optional[int] = None):
+        """Convenience: optionally set the exposure, then capture one frame (see :attr:`stream`)."""
         if exposure_us is not None:
             self.exposure_us = exposure_us
         return self.doCaptureFrame()
