@@ -8,8 +8,8 @@ DoLP are computed on the same reduced images, in float32.
     python examples/preview_mytk_channels.py --exp 10000
 
 Start/Stop pauses the camera, the slider sets the exposure time (logarithmic, in ms), and
-"Save as..." keeps the next N consecutive full-size raw mosaics in a deque, averages them and
-writes the average (float32, in ADU: a 32-bit .tiff or a .npy). Close the window to stop.
+"Save as..." waits for N fresh frames, averages the last N full-size raw mosaics (a deque that
+never holds more than N) and writes the average (in ADU: a .tiff stretched to the full 16-bit scale, or a float32 .npy). Close the window to stop.
 Needs myTk:  pip install mytk
 """
 import argparse
@@ -29,8 +29,9 @@ LAYOUT = ((0, 0), (0, 1), (1, 0), (1, 1), (0, 2), (1, 2))        # (row, column)
 STEP = 3                                          # show every 3rd pixel: still a view, still no copy
 DARK = 0.1                                        # AoLP is not drawn where S0 is under this fraction of the display scale
 LOG_MS = (-1, 3)                                  # exposure slider: 0.1 ms to 1000 ms, on a log scale
+FULL_12_BIT, FULL_16_BIT = 4095, 65535            # the TIFF uses the whole 16-bit scale: 4095 ADU is written as 65535
 MAX_IMAGES = 100                                  # a raw mosaic is 10 MB: they all wait in memory until averaged
-FILE_TYPES = (("TIFF, 32-bit float", "*.tiff"), ("NumPy array, float32", "*.npy"))
+FILE_TYPES = (("TIFF, 16-bit", "*.tiff"), ("NumPy array, float32", "*.npy"))
 
 
 def polarization_pictures(views, top):
@@ -46,7 +47,7 @@ def polarization_pictures(views, top):
 
 
 def save_average(mosaics, path):
-    """Average the mosaics (float32, in ADU) and write the result: a numpy array for .npy, a float TIFF otherwise."""
+    """Average the mosaics in float32 and write the result: float32 ADU for .npy; for a TIFF, the 12-bit range stretched to the full 16 bits, then rounded."""
     average = np.zeros(mosaics[0].shape, np.float32)
     for mosaic in mosaics:
         average += mosaic
@@ -54,7 +55,7 @@ def save_average(mosaics, path):
     if path.endswith(".npy"):
         np.save(path, average)
     else:
-        PILImage.fromarray(average).save(path)
+        PILImage.fromarray(np.rint(average * (FULL_16_BIT / FULL_12_BIT)).astype(np.uint16)).save(path)
 
 
 class ChannelsApp(App):
@@ -67,7 +68,8 @@ class ChannelsApp(App):
         self.pending = False                      # a frame is on its way to the window
         self.wanted = True                        # Start/Stop
         self.exposure_us = exposure_us            # what the slider asks for; the grab thread applies it
-        self.save = None                          # {"path", "mosaics"} while saving: a deque of the next N frames
+        self.recent = deque(maxlen=1)             # always the last N raw mosaics, N being the number of images to save
+        self.save = None                          # {"path", "remaining"} while waiting for N fresh frames
         self.message = ""
 
         # what the controls show and hold, bound to them (changing one changes the other)
@@ -132,7 +134,7 @@ class ChannelsApp(App):
         if path and self.save is None:
             self.wanted = True                    # the images come from the stream
             self.button_text = "Stop"
-            self.save = {"path": path, "mosaics": deque(maxlen=self.images_to_save)}
+            self.save = {"path": path, "remaining": self.images_to_save}
 
     def show(self, pictures, text):
         for image, picture in zip(self.images, pictures):
@@ -163,8 +165,7 @@ class ChannelsApp(App):
         start = time.perf_counter()
         frame = self.camera.snap()
         snapped = time.perf_counter()
-        if self.save is not None:
-            self.collect(frame.mosaic)
+        self.collect(frame.mosaic)
         views = [c[::STEP, ::STEP] for c in frame.raw_channels]
         top = max(int(np.percentile(v, 99.5)) for v in views) or 1   # one scale for all four, to keep their ratios (uint32: 4095 * 255 overflows uint16)
         pictures = [PILImage.fromarray((np.minimum(v, top).astype(np.uint32) * 255 // top).astype(np.uint8)) for v in views]
@@ -177,14 +178,21 @@ class ChannelsApp(App):
             self.schedule_on_main_thread(self.show, args=[pictures, text])
 
     def collect(self, mosaic):
-        """Keep the next frames of the stream in the deque; average and write them when it is full."""
+        """Keep the last N frames of the stream, and when a save is waiting for N fresh ones, average and write them."""
+        if self.recent.maxlen != self.images_to_save:
+            self.recent = deque(self.recent, maxlen=self.images_to_save)
+        self.recent.append(mosaic)
         request = self.save
-        mosaics = request["mosaics"]
-        mosaics.append(mosaic)
-        self.message = f"saving {len(mosaics)}/{mosaics.maxlen}"
-        if len(mosaics) == mosaics.maxlen:
-            save_average(mosaics, request["path"])
-            self.message = f"saved the average of {len(mosaics)} image(s) to {request['path']}"
+        if request is None:
+            return
+        request["remaining"] -= 1
+        self.message = f"saving {len(self.recent)}/{self.recent.maxlen}"
+        if request["remaining"] <= 0:
+            try:
+                save_average(self.recent, request["path"])
+                self.message = f"saved the average of {len(self.recent)} image(s) to {request['path']}"
+            except Exception as error:
+                self.message = f"could not save: {error}"
             self.save = None
 
     def stop(self):
