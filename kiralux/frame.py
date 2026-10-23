@@ -78,6 +78,9 @@ def hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     return (np.clip(np.stack([r + m, g + m, b + m], axis=-1), 0, 1) * 255).astype(np.uint8)
 
 
+IMAGES = ("mosaic", "I0", "I45", "I90", "I135", "S0", "DoLP", "AoLP")
+
+
 class PolarFrame:
     """A raw 2x2 polarization mosaic with lazily-computed polarimetric views.
 
@@ -97,6 +100,24 @@ class PolarFrame:
     @property
     def shape(self):
         return self.mosaic.shape
+
+    def image(self, name: str) -> np.ndarray:
+        """One 2D image of the frame, picked by name from :data:`IMAGES`, like a frame of a standard camera.
+
+        ``mosaic`` is the full-size uint16 mosaic and ``I0`` ... ``I135`` the uint16 analyser images
+        (half-size views, no copy). ``S0``, ``DoLP`` and ``AoLP`` (degrees) are half-size float32.
+        """
+        if name == "mosaic":
+            return self.mosaic
+        if name in IMAGES[1:5]:
+            return self.raw_channels[IMAGES.index(name) - 1]
+        if name == "S0":
+            return self.s0
+        if name == "DoLP":
+            return self.dolp
+        if name == "AoLP":
+            return self.aolp
+        raise ValueError(f"unknown image {name!r}: choose one of {IMAGES}")
 
     @cached_property
     def raw_channels(self):

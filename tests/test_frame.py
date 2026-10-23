@@ -127,6 +127,17 @@ def uniform(i0, i45, i90, i135, shape=(4, 5)):
 
 
 class TestPolarFrame:
+    def test_image_picks_one_2d_image_by_name(self):
+        f = uniform(10, 20, 30, 40)
+        for name, value in (("I0", 10), ("I45", 20), ("I90", 30), ("I135", 40)):
+            assert f.image(name).shape == (4, 5) and (f.image(name) == value).all()
+        assert f.image("mosaic") is f.mosaic
+        assert (f.image("S0") == 50).all() and f.image("DoLP").dtype == np.float32
+
+    def test_image_refuses_an_unknown_name(self):
+        with pytest.raises(ValueError):
+            uniform(1, 1, 1, 1).image("I60")
+
     def test_channels_follow_the_imx250_layout(self):
         mosaic = np.array([[90, 45], [135, 0]], np.uint16)
         i0, i45, i90, i135 = PolarFrame(mosaic).channels
