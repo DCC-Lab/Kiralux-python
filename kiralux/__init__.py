@@ -32,6 +32,7 @@ from .capabilities import (
 )
 from .camera import Kiralux
 from .device import KiraluxDevice, KiraluxPort
+from .debug import KiraluxDebug
 
 try:  # populated from the installed distribution's metadata
     from importlib.metadata import version, PackageNotFoundError
@@ -58,6 +59,7 @@ __all__ = [
     "Kiralux",
     "KiraluxDevice",
     "KiraluxPort",
+    "KiraluxDebug",
     "PolarFrame",
     "unpack_mosaic",
     "hsv_to_rgb",

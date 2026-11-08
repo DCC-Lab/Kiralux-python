@@ -77,6 +77,10 @@ with KiraluxCameraDevice() as cam:       # initialize -> Ready, shutdown on exit
     frame = cam.snap()                   # -> PolarFrame
     for f in cam.captureFrames(10):      # inherited capture loop
         ...
+
+    cam.stream = "I90"                   # or "I0", "I45", "I135", "S0", "DoLP", "AoLP", "mosaic"
+    image = cam.snap()                   # -> a plain 2D numpy image, like a standard camera
+    cam.startStreaming()                 # continuous mode; cam.stream can change while it runs
 ```
 
 `Kiralux` and `KiraluxCameraDevice` share one command vocabulary and one frame

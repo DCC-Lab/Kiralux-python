@@ -25,6 +25,7 @@ from hardwarelibrary.communication.usbport import USBPort
 
 from .frame import PolarFrame, unpack_mosaic, HEADER_SIZE
 from .camera_device import (
+    drain_image_endpoint,
     Command,
     KiraluxError,
     VID,
@@ -47,6 +48,7 @@ class Kiralux:
         self.responseEndPoint = self.port.endPointForAddress(EP_RESPONSE)
         self.imageEndPoint = self.port.endPointForAddress(EP_IMAGE)
         self.command(Command.STOP)
+        drain_image_endpoint(self.port, self.imageEndPoint)
         self.serial = self.command(Command.SERNUM)
         self.model = self.command(Command.MODEL)
         self.validate_vocabulary()

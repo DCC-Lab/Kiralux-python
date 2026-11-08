@@ -1,8 +1,8 @@
 """Test doubles shared by the Kiralux test suite. No camera needed.
 
 * :func:`pack_mosaic` — the inverse of ``unpack_mosaic``: builds the exact bytes the
-  camera streams on EP 0x83 (16384-byte header, 12-bit packed pixels, 16383 "main"
-  bytes + 1 "tail" byte per 16384-byte block).
+  camera streams on EP 0x83 (16384-byte packets: a 4-byte header, then 12-bit
+  packed pixels, one continuous stream; packet 0 also carries the tag list, ending with ENDT).
 * :class:`FakeCameraPort` — a ``ProtocolDebugPort`` (answers every command of
   ``protocol.json`` from what it was last told) that also serves an image stream.
 * :class:`FramedDebugPort` — the same, plus the camera's 1024-byte framing, for the
@@ -19,7 +19,7 @@ from hardwarelibrary.communication.debugport import ProtocolDebugPort
 
 from kiralux.camera_device import Command
 from kiralux.device import PROTOCOL_PATH, COMMAND_SIZE
-from kiralux.frame import HEADER_SIZE, BLOCK_SIZE, BLOCK_MAIN
+from kiralux.frame import BLOCK_SIZE, PACKET_HEADER, PACKET_DATA, TAG_SIZE, END_TAG
 
 WIDTH, HEIGHT = 2448, 2048
 
@@ -39,14 +39,17 @@ def pack_mosaic(mosaic: np.ndarray) -> bytes:
     stream[1::3] = (even >> 8) | ((odd & 0x0F) << 4)
     stream[2::3] = odd >> 4
 
-    nbytes = stream.size
-    nblocks = nbytes // BLOCK_SIZE
-    main = stream[: nblocks * BLOCK_MAIN].reshape(nblocks, BLOCK_MAIN)
-    rest = stream[nblocks * BLOCK_MAIN:]           # tail bytes, then the short remainder
-    blocks = np.empty((nblocks, BLOCK_SIZE), np.uint8)
-    blocks[:, :BLOCK_MAIN] = main
-    blocks[:, BLOCK_MAIN] = rest[:nblocks]
-    return bytes(HEADER_SIZE) + blocks.tobytes() + rest[nblocks:].tobytes()
+    tags = bytearray(b"\x90\x90\x00\x00")                 # magic + packet number, then the seven 8-byte tags
+    for name in (b"TSI\x00", b"FCNT", b"PCKH", b"PCKL", b"IFMT", b"IOFF"):
+        tags += name + bytes(4)
+    tags += END_TAG + bytes(TAG_SIZE - len(END_TAG))
+    first = BLOCK_SIZE - len(tags)
+    chunks = [stream[:first]] + [stream[i:i + PACKET_DATA] for i in range(first, stream.size, PACKET_DATA)]
+    packets = []
+    for number, chunk in enumerate(chunks):
+        head = bytes(tags) if number == 0 else bytes([0x90, 0x90, number & 0xFF, number >> 8])
+        packets.append(head + chunk.tobytes())
+    return b"".join(packets)
 
 
 def frame_bytes(width=WIDTH, height=HEIGHT, seed=0) -> tuple[bytes, np.ndarray]:
@@ -76,17 +79,35 @@ class FakeCameraPort(ProtocolDebugPort):
         self.image = image
         self.stream_calls = []
         self.sent = []                       # decoded text of every command written
+        self.streaming = False               # like the camera: only a started capture has data to read
+        self.continuous = False              # "nframes 0": the frame is sent again and again
+        self.cursor = 0
 
     def writeData(self, data, endPoint=None):
-        self.sent.append(bytes(data).split(b"\x00")[0].decode("latin1"))
+        text = bytes(data).split(b"\x00")[0].decode("latin1")
+        self.sent.append(text)
+        if text.startswith("nframes"):
+            self.continuous = text == "nframes 0"
+        if text.split(" ")[0] in ("start", "stop"):
+            self.streaming = text.startswith("start")
+            self.cursor = 0
         return super().writeData(data, endPoint)
 
     def endPointForAddress(self, address):
         return address
 
     def readStream(self, length, endPoint=None, chunkSize=None, timeout=None):
+        if not self.streaming:
+            raise TimeoutError("nothing to read: no capture was started")
         self.stream_calls.append({"length": length, "endPoint": endPoint, "timeout": timeout})
-        return bytearray(self.image[:length])
+        if not self.continuous:
+            return bytearray(self.image[:length])
+        out = bytearray()
+        while len(out) < length:             # the same frame over and over, read in arbitrary chunks
+            take = self.image[self.cursor: self.cursor + length - len(out)]
+            out += take
+            self.cursor = (self.cursor + len(take)) % len(self.image)
+        return out
 
 
 class FramedDebugPort(FakeCameraPort):
