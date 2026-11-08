@@ -27,7 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Image I/O used by the scripts in examples/ (not needed by the driver itself).
-examples = ["pillow"]
+examples = ["pillow", "scipy"]
 # Test suite: `pytest` runs everything that does not need a camera; with a camera
 # plugged in, the `hardware` tests run too (`pytest --hardware`, or `--no-hardware` to skip them).
 test = ["pytest", "pytest-cov"]
